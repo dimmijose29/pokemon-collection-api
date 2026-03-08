@@ -17,6 +17,7 @@ class User extends Authenticatable
         'password',
         'totp_secret',
         'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class User extends Authenticatable
         'email_verified_at'         => 'datetime',
         'last_login_at'             => 'datetime',
         'two_factor_recovery_codes' => 'array',
+        'two_factor_confirmed_at'   => 'datetime',
         'birth_year'                => 'integer',
         'password' => 'hashed',
     ];
@@ -33,19 +35,19 @@ class User extends Authenticatable
     protected function hashedPassword(): Attribute
     {
         return Attribute::make(
-            set: fn ($value) => bcrypt($value),
+            set: fn($value) => bcrypt($value),
         );
     }
 
     // Metodo helper per verificare 2FA
     public function hasEnabledTwoFactor(): bool
     {
-        return $this->is_2fa_enabled && $this->totp_secret !== null;
+        return $this->is_2fa_enabled && $this->totp_secret !== null && $this->two_factor_confirmed_at !== null;
     }
 
-    // Futuro: relazione con collections
-    public function collections()
-    {
-        return $this->hasMany(Collection::class);
-    }
+    // // Futuro: relazione con collections
+    // public function collections()
+    // {
+    //     return $this->hasMany(Collection::class);
+    // }
 }

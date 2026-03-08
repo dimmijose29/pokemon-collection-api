@@ -4,15 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use PragmaRX\Google2FALaravel\Google2FA;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
-use App\Http\Requests\Auth\{LoginRequest,RegisterRequest};
+use App\Http\Requests\Auth\{LoginRequest, RegisterRequest};
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -45,24 +44,36 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        // Aggiorna ultimo login
-        $user->update(['last_login_at' => now()]);
+        // Se 2FA non è abilitato, generiamo subito il token
+        if (!$user->is_2fa_enabled) {
+            // Genera token Sanctum
+            $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Se 2FA attivo → richiedi codice
-        if ($user->is_2fa_enabled) {
-            // Opzionale: invalidiamo token temporanei o forniamo flag
             return response()->json([
-                'message' => 'Inserisci il codice 2FA per continuare.',
-                'two_factor_required' => true,
-            ], 200);
+                'user'  => $user,
+                'token' => $token,
+            ]);
         }
 
-        // Genera token Sanctum
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // 2FA attivo → crea token temporaneo per la sfida
+        $tempToken = $user->createToken(
+            '2fa_challenge',
+            ['2fa'], // abilities limitate
+            now()->addMinutes(10) // scade in 10 minuti
+        )->plainTextToken;
 
         return response()->json([
-            'user'  => $user,
-            'token' => $token,
+            'two_factor_required' => true,
+            'message' => 'Inserisci il codice 2FA',
+            'temp_token' => $tempToken,
+        ], 200);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            'message' => 'Logout effettuato con successo',
         ]);
     }
 
@@ -86,7 +97,7 @@ class AuthController extends Controller
         $user->save();
 
         $qrCodeUrl = $this->google2fa->getQRCodeUrl(
-            config('app.name'),
+            config('app.name',),
             $user->email,
             $secret
         );
@@ -131,23 +142,39 @@ class AuthController extends Controller
     public function verify2FA(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'code'  => 'required|string|size:6',
+            'temp_token' => 'required|string',
+            'code'       => 'required|string|size:6',
         ]);
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        // Verifica il token temporaneo
+        $token = PersonalAccessToken::findToken($request->temp_token);
 
+        if (! $token) {
+            return response()->json(['message' => 'Token temporaneo non valido o scaduto.'], 401);
+        }
+
+        $user = $token->tokenable;
+
+        if (! $user || ! $user->is_2fa_enabled) {
+            return response()->json(['message' => 'Operazione non valida.'], 400);
+        }
+
+        // Verifica codice TOTP
         $valid = $this->google2fa->verifyKey($user->totp_secret, $request->code);
 
         if (! $valid) {
-            return response()->json(['message' => 'Codice 2FA non valido'], 422);
+            return response()->json(['message' => 'Codice 2FA non valido.'], 422);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Tutto ok → revoca il temp token (opzionale ma pulito)
+        $token->delete();
+
+        // Crea token definitivo
+        $authToken = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'user'  => $user,
-            'token' => $token,
+            'token' => $authToken,
         ]);
     }
 

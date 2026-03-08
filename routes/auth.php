@@ -14,15 +14,19 @@ Route::prefix('auth')->group(function () {
 
     // Login
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/2fa/verify', [AuthController::class, 'verify2FA']);
 
     // Rotte protette
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
-        
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+        Route::prefix('2fa')->group(function () {
+            Route::post('/enable', [AuthController::class, 'enable2FA']);
+            Route::post('/confirm', [AuthController::class, 'confirm2FA']);
+            Route::post('/disable', [AuthController::class, 'disable2FA']);
+        });
         // Attivazione / verifica 2FA (solo utente loggato)
-        Route::post('/2fa/enable', [AuthController::class, 'enable2FA']);
-        Route::post('/2fa/confirm', [AuthController::class, 'confirm2FA']);
-        Route::post('/2fa/disable', [AuthController::class, 'disable2FA']);
-        Route::post('/2fa/verify', [AuthController::class, 'verify2FA']);
+        // Route::post('/2fa/verify', [AuthController::class, 'verify2FA']);
     });
 });
