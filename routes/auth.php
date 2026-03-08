@@ -26,7 +26,5 @@ Route::prefix('auth')->group(function () {
             Route::post('/confirm', [AuthController::class, 'confirm2FA']);
             Route::post('/disable', [AuthController::class, 'disable2FA']);
         });
-        // Attivazione / verifica 2FA (solo utente loggato)
-        // Route::post('/2fa/verify', [AuthController::class, 'verify2FA']);
     });
 });

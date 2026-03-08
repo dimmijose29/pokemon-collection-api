@@ -180,7 +180,17 @@ class AuthController extends Controller
 
     public function disable2FA(Request $request)
     {
+        $request->validate([
+            'code' => 'required|string|size:6',
+        ]);
+
         $user = $request->user();
+
+        $valid = $this->google2fa->verifyKey($user->totp_secret, $request->code);
+
+        if (! $valid) {
+            return response()->json(['message' => 'Codice non valido'], 422);
+        }
 
         $user->update([
             'is_2fa_enabled' => false,
