@@ -3,4 +3,4 @@
 use App\Http\Controllers\LanguageController;
 use Illuminate\Support\Facades\Route;
 
-Route::apiResource('languages', LanguageController::class);
+Route::middleware(['auth:sanctum', 'admin'])->apiResource('languages', LanguageController::class);

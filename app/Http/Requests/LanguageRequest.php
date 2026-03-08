@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\Language;
 
 class LanguageRequest extends FormRequest
 {
@@ -12,7 +13,35 @@ class LanguageRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true; // per ora; poi useremo policy o gate
+        $user = $this->user();
+
+        if (!$user) return false; // non autenticato
+
+        // Per GET (index/show) → chiama policy viewAny/view
+        if ($this->method() === 'GET') {
+            if ($this->route('language')) return $user->can('view', $this->route('language'));
+            return $user->can('viewAny', Language::class);
+        }
+
+        // Per POST (create) → chiama policy create
+        if ($this->method() === 'POST') {
+            return $user->can('create', Language::class);
+        }
+
+        // Per PUT/PATCH (update) → chiama policy update
+        if ($this->method() === 'PUT' || $this->method() === 'PATCH') {
+            if (!$this->route('language')) return false;
+            return $user->can('update', $this->route('language'));
+        }
+
+        // Per DELETE → chiama policy delete
+        if ($this->method() === 'DELETE') {
+            if (!$this->route('language')) return false;
+            return $user->can('delete', $this->route('language'));
+        }
+
+        // Default
+        return false;
     }
 
     /**
