@@ -60,10 +60,17 @@ class LanguageRequest extends FormRequest
                 'string',
                 'max:50',
             ],
+            'country_code' => [
+                'required',
+                'string',
+                'max:10',
+            ],
         ];
 
         if ($this->method() === 'PUT' || $this->method() === 'PATCH') {
             $rules['code'][] = Rule::unique('languages', 'code')->ignore($this->route('language'));
+            $rules['name'][] = Rule::unique('languages', 'name')->ignore($this->route('language'));
+            $rules['country_code'][] = Rule::unique('languages', 'country_code')->ignore($this->route('language'));
         }
 
         // Se è un UPDATE (PUT/PATCH), aggiungiamo la regola unique ignorando l'ID corrente
@@ -72,10 +79,12 @@ class LanguageRequest extends FormRequest
 
             $rules['code'][] = Rule::unique('languages', 'code')->ignore($languageId);
             $rules['name'][] = Rule::unique('languages', 'name')->ignore($languageId);
+            $rules['country_code'][] = Rule::unique('languages', 'country_code')->ignore($languageId);
         } else {
             // CREATE: unique semplice
             $rules['code'][] = Rule::unique('languages', 'code');
             $rules['name'][] = Rule::unique('languages', 'name');
+            $rules['country_code'][] = Rule::unique('languages', 'country_code');
         }
 
         return $rules;
@@ -93,6 +102,9 @@ class LanguageRequest extends FormRequest
             'name.required' => "Il nome della lingua è obbligatorio.",
             'name.max'      => "Il nome non può superare i 50 caratteri.",
             'name.unique'   => "Questo nome è già in uso.",
+            'country_code.required' => "Il codice paese è obbligatorio.",
+            'country_code.max'      => "Il codice paese non può superare i 10 caratteri.",
+            'country_code.unique'   => "Questo codice paese è già in uso.",
         ];
     }
 
@@ -103,7 +115,7 @@ class LanguageRequest extends FormRequest
     protected function prepareForValidation()
     {
         $this->merge([
-            'code' => strtoupper(trim($this->input('code', ''))),
+            'country_code' => strtoupper(trim($this->input('country_code', ''))),
         ]);
     }
 }

@@ -12,7 +12,7 @@ class Language extends Model
     protected $fillable = [
         'code',
         'name',
-        'flag_emoji',
+        'country_code',
     ];
 
     // Relazione futura con set_translations

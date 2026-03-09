@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('languages', function (Blueprint $table) {
-            $table->string('country_code', 10)->nullable()->after('name');
+            $table->string('country_code', 10)->after('name');
         });
     }
 
