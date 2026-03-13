@@ -34,6 +34,15 @@ class LanguageController extends Controller
     {
         $language->delete();
 
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Lingua eliminata con successo'], 200);
+    }
+
+    public function restore($language)
+    {
+        $language  = Language::withTrashed()->findOrFail($language);
+
+        $language->restore();
+
+        return response()->json(new LanguageResource($language));
     }
 }

@@ -36,6 +36,15 @@ class RarityController extends Controller
     {
         $rarity->delete();
 
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Rarità eliminata con successo'], 200);
+    }
+
+    public function restore($rarity)
+    {
+        $rarity  = Rarity::withTrashed()->findOrFail($rarity);
+
+        $rarity->restore();
+
+        return response()->json(new RarityResource($rarity));
     }
 }

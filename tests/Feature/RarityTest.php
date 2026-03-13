@@ -141,7 +141,7 @@ class RarityTest extends TestCase
         $response = $this->actingAs($this->admin)
                          ->deleteJson("/api/rarities/{$language->id}");
 
-        $response->assertStatus(204);
+        $response->assertStatus(200);
 
         $this->assertSoftDeleted('rarities', ['id' => $language->id]); // se usi soft deletes
         // oppure $this->assertDatabaseMissing('rarities', ['id' => $language->id]);

@@ -159,7 +159,7 @@ class LanguageTest extends TestCase
         $response = $this->actingAs($this->admin)
                          ->deleteJson("/api/languages/{$language->id}");
 
-        $response->assertStatus(204);
+        $response->assertStatus(200);
 
         $this->assertSoftDeleted('languages', ['id' => $language->id]); // se usi soft deletes
         // oppure $this->assertDatabaseMissing('languages', ['id' => $language->id]);

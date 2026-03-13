@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('api')
                 ->group(base_path('routes/auth.php'))
                 ->group(base_path('routes/rarities.php'))
+                ->group(base_path('routes/card_types.php'))
                 ->group(base_path('routes/languages.php'));
         },
     )
