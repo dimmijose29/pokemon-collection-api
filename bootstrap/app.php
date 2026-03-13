@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/auth.php'))
+                ->group(base_path('routes/rarities.php'))
                 ->group(base_path('routes/languages.php'));
         },
     )
