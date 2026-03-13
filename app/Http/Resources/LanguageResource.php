@@ -13,6 +13,7 @@ class LanguageResource extends JsonResource
             'id'   => $this->id,
             'code' => $this->code,
             'name' => $this->name,
+            'country_code' => $this->country_code,
             'created_at' => $this->created_at->toDateTimeString(),
         ];
     }

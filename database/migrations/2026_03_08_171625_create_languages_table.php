@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('code', 10)->unique(); // es. 'it', 'en', 'fr'
             $table->string('name', 50);           // es. 'Italiano', 'English'
             $table->timestamps();
+            $table->softDeletes();
             // Indice su code (già unique, ma esplicito)
             $table->index('code');
         });

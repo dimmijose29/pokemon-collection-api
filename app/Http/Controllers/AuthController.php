@@ -12,6 +12,7 @@ use BaconQrCode\Writer;
 use App\Http\Requests\Auth\{LoginRequest, RegisterRequest};
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -34,15 +35,18 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $credentials = $request->getCredentials();
+        $login = trim($request->input('login'));
+        $password = $request->input('password');
 
-        if (! Auth::attempt($credentials)) {
+        $user = User::where('email', $login)
+                    ->orWhere('username', $login)
+                    ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
             return response()->json([
                 'message' => 'Credenziali non valide.',
             ], 422);
         }
-
-        $user = Auth::user();
 
         // Se 2FA non è abilitato, generiamo subito il token
         if (!$user->is_2fa_enabled) {
