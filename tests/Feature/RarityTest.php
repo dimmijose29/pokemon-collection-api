@@ -35,23 +35,23 @@ class RarityTest extends TestCase
     }
 
     /** @test */
-    public function anyone_can_view_single_language()
+    public function anyone_can_view_single_rarity()
     {
-        $language = Rarity::factory()->create([
+        $rarity = Rarity::factory()->create([
             'name' => 'Common',
         ]);
 
-        $response = $this->getJson("/api/rarities/{$language->id}");
+        $response = $this->getJson("/api/rarities/{$rarity->id}");
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'id' => $language->id,
+                     'id' => $rarity->id,
                      'name' => 'Common',
                  ]);
     }
 
     /** @test */
-    public function admin_can_create_language()
+    public function admin_can_create_rarity()
     {
         $payload = [
             'name' => 'Reverse Holo',
@@ -69,7 +69,7 @@ class RarityTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_create_language()
+    public function non_admin_cannot_create_rarity()
     {
         $payload = [
             'name' => 'EX',
@@ -98,33 +98,33 @@ class RarityTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_update_language()
+    public function admin_can_update_rarity()
     {
-        $language = Rarity::factory()->create(['name' => 'VSTAR']);
+        $rarity = Rarity::factory()->create(['name' => 'VSTAR']);
             
             $payload = [
             'name' => 'VMAX'
         ];
 
         $response = $this->actingAs($this->admin)
-                         ->putJson("/api/rarities/{$language->id}", $payload);
+                         ->putJson("/api/rarities/{$rarity->id}", $payload);
 
         $response->assertStatus(200)
                  ->assertJsonPath('name', 'VMAX');
 
         $this->assertDatabaseHas('rarities', [
-            'id' => $language->id,
+            'id' => $rarity->id,
             'name' => 'VMAX',
         ]);
     }
 
     /** @test */
-    public function non_admin_cannot_update_language()
+    public function non_admin_cannot_update_rarity()
     {
-        $language = Rarity::factory()->create();
+        $rarity = Rarity::factory()->create();
 
         $response = $this->actingAs($this->user)
-                         ->putJson("/api/rarities/{$language->id}", [
+                         ->putJson("/api/rarities/{$rarity->id}", [
                              'name' => 'Aggiornato da non-admin',
                          ]);
 
@@ -134,29 +134,29 @@ class RarityTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_delete_language()
+    public function admin_can_delete_rarity()
     {
-        $language = Rarity::factory()->create();
+        $rarity = Rarity::factory()->create();
 
         $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/rarities/{$language->id}");
+                         ->deleteJson("/api/rarities/{$rarity->id}");
 
         $response->assertStatus(200);
 
-        $this->assertSoftDeleted('rarities', ['id' => $language->id]); // se usi soft deletes
-        // oppure $this->assertDatabaseMissing('rarities', ['id' => $language->id]);
+        $this->assertSoftDeleted('rarities', ['id' => $rarity->id]); // se usi soft deletes
+        // oppure $this->assertDatabaseMissing('rarities', ['id' => $rarity->id]);
     }
 
     /** @test */
-    public function non_admin_cannot_delete_language()
+    public function non_admin_cannot_delete_rarity()
     {
-        $language = Rarity::factory()->create();
+        $rarity = Rarity::factory()->create();
 
         $response = $this->actingAs($this->user)
-                         ->deleteJson("/api/rarities/{$language->id}");
+                         ->deleteJson("/api/rarities/{$rarity->id}");
 
         $response->assertStatus(403);
 
-        $this->assertDatabaseHas('rarities', ['id' => $language->id]);
+        $this->assertDatabaseHas('rarities', ['id' => $rarity->id]);
     }
 }

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->group(base_path('routes/artists.php'))
                 ->group(base_path('routes/grading_companies.php'))
                 ->group(base_path('routes/conditions.php'))
+                ->group(base_path('routes/currencies.php'))
                 ->group(base_path('routes/card_types.php'))
                 ->group(base_path('routes/languages.php'));
         },

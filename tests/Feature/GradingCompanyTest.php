@@ -35,7 +35,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function anyone_can_view_single_card_type()
+    public function anyone_can_view_single_granding_company()
     {
         $gradingCompany = GradingCompany::factory()->create([
             'name' => 'PSA',
@@ -51,7 +51,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_create_card_type()
+    public function admin_can_create_granding_company()
     {
         $payload = [
             'name' => 'BGS',
@@ -69,7 +69,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_create_card_type()
+    public function non_admin_cannot_create_granding_company()
     {
         $payload = [
             'name' => 'TAG',
@@ -98,7 +98,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_update_card_type()
+    public function admin_can_update_granding_company()
     {
         $gradingCompany = GradingCompany::factory()->create(['name' => 'PSA']);
             
@@ -119,7 +119,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_update_card_type()
+    public function non_admin_cannot_update_granding_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
@@ -134,7 +134,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_delete_card_type()
+    public function admin_can_delete_granding_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
@@ -148,7 +148,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_delete_card_type()
+    public function non_admin_cannot_delete_granding_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
