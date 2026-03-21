@@ -71,15 +71,6 @@ class LanguageRequest extends FormRequest
             $rules['code'][] = Rule::unique('languages', 'code')->ignore($this->route('language'));
             $rules['name'][] = Rule::unique('languages', 'name')->ignore($this->route('language'));
             $rules['country_code'][] = Rule::unique('languages', 'country_code')->ignore($this->route('language'));
-        }
-
-        // Se è un UPDATE (PUT/PATCH), aggiungiamo la regola unique ignorando l'ID corrente
-        if ($this->isMethod('put') || $this->isMethod('patch') || $this->filled('language_id')) {
-            $languageId = $this->route('language')?->id ?? $this->input('language_id');
-
-            $rules['code'][] = Rule::unique('languages', 'code')->ignore($languageId);
-            $rules['name'][] = Rule::unique('languages', 'name')->ignore($languageId);
-            $rules['country_code'][] = Rule::unique('languages', 'country_code')->ignore($languageId);
         } else {
             // CREATE: unique semplice
             $rules['code'][] = Rule::unique('languages', 'code');
