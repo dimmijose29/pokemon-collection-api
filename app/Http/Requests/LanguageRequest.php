@@ -87,15 +87,15 @@ class LanguageRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code.required' => "Il codice è obbligatorio.",
-            'code.unique'   => "Questo codice è già in uso.",
-            'code.max'      => "Il codice non può superare i 10 caratteri.",
-            'name.required' => "Il nome della lingua è obbligatorio.",
-            'name.max'      => "Il nome non può superare i 50 caratteri.",
-            'name.unique'   => "Questo nome è già in uso.",
-            'country_code.required' => "Il codice paese è obbligatorio.",
-            'country_code.max'      => "Il codice paese non può superare i 10 caratteri.",
-            'country_code.unique'   => "Questo codice paese è già in uso.",
+            'code.required' => "Il codice è obbligatorio",
+            'code.unique'   => "Questo codice è già in uso",
+            'code.max'      => "Il codice non può superare i 10 caratteri",
+            'name.required' => "Il nome della lingua è obbligatorio",
+            'name.max'      => "Il nome non può superare i 50 caratteri",
+            'name.unique'   => "Questo nome è già in uso",
+            'country_code.required' => "Il codice paese è obbligatorio",
+            'country_code.max'      => "Il codice paese non può superare i 10 caratteri",
+            'country_code.unique'   => "Questo codice paese è già in uso",
         ];
     }
 

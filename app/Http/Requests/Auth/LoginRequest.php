@@ -24,7 +24,7 @@ class LoginRequest extends FormRequest
                         ->where('email', $value)
                         ->orWhere('username', $value)
                         ->exists()) {
-                        $fail('Nessun utente trovato con queste credenziali.');
+                        $fail('Nessun utente trovato con queste credenziali');
                     }
                 },
             ],
@@ -35,8 +35,8 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'login.required'    => "Inserisci email o username.",
-            'password.required' => "La password è obbligatoria.",
+            'login.required'    => "Inserisci email o username",
+            'password.required' => "La password è obbligatoria",
         ];
     }
 

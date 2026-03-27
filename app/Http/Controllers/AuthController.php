@@ -9,10 +9,13 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
-use App\Http\Requests\Auth\{LoginRequest, RegisterRequest};
+use App\Http\Requests\Auth\{LoginRequest, RegisterRequest, ForgotPasswordRequest, PasswordUpdateRequest};
+use App\Mail\PasswordRecoveryEmail;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -204,5 +207,21 @@ class AuthController extends Controller
         ]);
 
         return response()->json(['message' => '2FA disattivato']);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        $password = Str::random(16);
+        User::whereEmail($request->email)->update(['password' => Hash::make($password)]);
+        Mail::to($request->email)->send(new PasswordRecoveryEmail($request->email, $password));
+        return response()->json(['message' => 'Nuove credenziali inviate con successo'], 200);
+        
+    }
+
+    public function updatePassword(PasswordUpdateRequest $request, User $user)
+    {
+        $user->update(['password' => Hash::make($request->password)]);
+        return response()->json(['message' => 'Password aggiornata con successo'], 200);
+        
     }
 }

@@ -29,16 +29,16 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required'              => "L'email è obbligatoria.",
-            'email.email'                 => "Inserisci un indirizzo email valido.",
-            'email.unique'                => "Questa email è già registrata.",
-            'username.unique'             => "Questo username è già in uso.",
-            'password.required'           => "La password è obbligatoria.",
-            'password.min'                => "La password deve avere almeno 8 caratteri.",
-            'password.confirmed'           => "Le due password non coincidono.",
-            'birth_year.max'              => "Devi avere almeno 13 anni per registrarti.",
-            'avatar_url.url'              => "L'URL dell'avatar non è valido.",
-            'bio.max'                     => "La bio non può superare i 1000 caratteri.",
+            'email.required'              => "L'email è obbligatoria",
+            'email.email'                 => "Inserisci un indirizzo email valido",
+            'email.unique'                => "Questa email è già registrata",
+            'username.unique'             => "Questo username è già in uso",
+            'password.required'           => "La password è obbligatoria",
+            'password.min'                => "La password deve avere almeno 8 caratteri",
+            'password.confirmed'           => "Le due password non coincidono",
+            'birth_year.max'              => "Devi avere almeno 13 anni per registrarti",
+            'avatar_url.url'              => "L'URL dell'avatar non è valido",
+            'bio.max'                     => "La bio non può superare i 1000 caratteri",
             // puoi aggiungere altri messaggi personalizzati
         ];
     }

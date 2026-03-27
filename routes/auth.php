@@ -14,11 +14,13 @@ Route::prefix('auth')->group(function () {
 
     // Login
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/2fa/verify', [AuthController::class, 'verify2FA']);
 
     // Rotte protette
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/{user}/update-password', [AuthController::class, 'updatePassword']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::prefix('2fa')->group(function () {
