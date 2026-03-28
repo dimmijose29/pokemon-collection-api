@@ -47,7 +47,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($password, $user->password)) {
             return response()->json([
-                'message' => 'Credenziali non valide.',
+                'message' => 'Credenziali non valide',
             ], 422);
         }
 
