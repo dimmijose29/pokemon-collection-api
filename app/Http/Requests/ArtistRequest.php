@@ -59,8 +59,8 @@ class ArtistRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => "Il nome del tipo di carta è obbligatorio",
-            'name.unique'   => "Questo tipo di carta esiste già",
+            'name.required' => "Il nome dell'artista è obbligatorio",
+            'name.unique'   => "Questo artista esiste già",
             'name.max'      => "Il nome non può superare i 50 caratteri",
         ];
     }

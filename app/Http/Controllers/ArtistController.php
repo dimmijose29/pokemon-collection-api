@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Artist;
 use App\Http\Requests\ArtistRequest;
 use App\Http\Resources\ArtistResource;
 
 class ArtistController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(ArtistResource::collection(Artist::all()));
+        $data = Artist::orderBy('name');
+        if($request->boolean('withTrashed')) $data->withTrashed();
+        return response()->json(ArtistResource::collection($data->get()));
     }
 
     public function store(ArtistRequest $request)
