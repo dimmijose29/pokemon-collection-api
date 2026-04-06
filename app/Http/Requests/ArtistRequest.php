@@ -60,7 +60,7 @@ class ArtistRequest extends FormRequest
     {
         return [
             'name.required' => "Il nome dell'artista è obbligatorio",
-            'name.unique'   => "Questo artista esiste già",
+            'name.unique'   => "Questo artista è stato già inserito",
             'name.max'      => "Il nome non può superare i 50 caratteri",
         ];
     }
