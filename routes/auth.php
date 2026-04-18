@@ -20,6 +20,7 @@ Route::prefix('auth')->group(function () {
     // Rotte protette
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/me', [AuthController::class, 'updateProfile']);
         Route::put('/{user}/update-password', [AuthController::class, 'updatePassword']);
         Route::post('/logout', [AuthController::class, 'logout']);
 

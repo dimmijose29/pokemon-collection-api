@@ -224,4 +224,20 @@ class AuthController extends Controller
         return response()->json(['message' => 'Password aggiornata con successo'], 200);
         
     }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'username' => [
+                'required', 'string', 'min:3', 'max:30',
+                \Illuminate\Validation\Rule::unique('users', 'username')->ignore($user->id),
+            ],
+        ]);
+
+        $user->update(['username' => $request->username]);
+
+        return response()->json($user);
+    }
 }
