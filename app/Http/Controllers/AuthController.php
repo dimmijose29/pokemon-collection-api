@@ -100,7 +100,6 @@ class AuthController extends Controller
 
         $secret = $this->google2fa->generateSecretKey();
         $user->totp_secret = $secret;
-        $user->is_2fa_enabled = true;
         $user->save();
 
         $qrCodeUrl = $this->google2fa->getQRCodeUrl(
@@ -139,6 +138,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Codice non valido'], 422);
         }
 
+        $user->is_2fa_enabled = true;
         $user->two_factor_confirmed_at = now();
         $user->save();
 
@@ -207,6 +207,21 @@ class AuthController extends Controller
         ]);
 
         return response()->json(['message' => '2FA disattivato']);
+    }
+
+    public function cancelSetup2FA(Request $request)
+    {
+        $user = $request->user();
+
+        // Se la 2FA è già confermata, non si può annullare da qui
+        if ($user->is_2fa_enabled) {
+            return response()->json(['message' => 'Usa la disattivazione per rimuovere la 2FA attiva'], 400);
+        }
+
+        $user->totp_secret = null;
+        $user->save();
+
+        return response()->json(['message' => 'Setup 2FA annullato']);
     }
 
     public function forgotPassword(ForgotPasswordRequest $request)

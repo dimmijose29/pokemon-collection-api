@@ -28,6 +28,7 @@ Route::prefix('auth')->group(function () {
             Route::post('/enable', [AuthController::class, 'enable2FA']);
             Route::post('/confirm', [AuthController::class, 'confirm2FA']);
             Route::post('/disable', [AuthController::class, 'disable2FA']);
+            Route::post('/cancel', [AuthController::class, 'cancelSetup2FA']);
         });
     });
 });

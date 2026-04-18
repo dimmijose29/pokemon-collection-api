@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Rarity;
 use App\Http\Requests\RarityRequest;
 use App\Http\Resources\RarityResource;
-
+use Illuminate\Http\Request;
+    
 class RarityController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(RarityResource::collection(Rarity::all()));
+        $data = Rarity::orderBy('name');
+        if($request->boolean('withTrashed')) $data->withTrashed();
+        return response()->json(RarityResource::collection($data->get()));
     }
 
     public function store(RarityRequest $request)
