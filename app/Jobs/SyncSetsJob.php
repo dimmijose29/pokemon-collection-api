@@ -61,10 +61,24 @@ class SyncSetsJob implements ShouldQueue
                 $seriesModel = null;
 
                 if ($serieName) {
-                    $seriesModel = Series::updateOrCreate(
-                        ['tcgdex_id' => $serieTcgId],
-                        ['name' => $serieName]
-                    );
+                    $serieLogoUrl = $detail['serie']['logo'] ?? $setData['serie']['logo'] ?? null;
+
+                    if ($serieTcgId) {
+                        $seriesModel = Series::updateOrCreate(
+                            ['tcgdex_id' => $serieTcgId],
+                            ['name' => $serieName, 'logo_url' => $serieLogoUrl]
+                        );
+                    } else {
+                        // Fallback: usa il nome come chiave univoca per evitare duplicati
+                        $seriesModel = Series::firstOrCreate(
+                            ['name' => $serieName, 'tcgdex_id' => null],
+                            ['logo_url' => $serieLogoUrl]
+                        );
+                        // Aggiorna il logo se già esistente
+                        if ($serieLogoUrl && ! $seriesModel->logo_url) {
+                            $seriesModel->update(['logo_url' => $serieLogoUrl]);
+                        }
+                    }
                 }
 
                 Set::updateOrCreate(

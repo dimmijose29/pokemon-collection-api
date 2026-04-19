@@ -24,7 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->group(base_path('routes/series.php'))
                 ->group(base_path('routes/sets.php'))
                 ->group(base_path('routes/cards.php'))
-                ->group(base_path('routes/users.php'));
+                ->group(base_path('routes/users.php'))
+                ->group(base_path('routes/stats.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

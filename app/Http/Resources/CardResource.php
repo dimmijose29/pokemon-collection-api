@@ -19,10 +19,11 @@ class CardResource extends JsonResource
             'energy_types' => $this->energy_types,
             // Relazioni — incluse solo se caricate
             'set'          => $this->whenLoaded('set', fn() => [
-                'id'        => $this->set->id,
-                'name'      => $this->set->name,
-                'logo_url'  => $this->set->logo_url  ? $this->set->logo_url  . '.png' : null,
-                'symbol_url'=> $this->set->symbol_url ? $this->set->symbol_url . '.png' : null,
+                'id'         => $this->set->id,
+                'tcgdex_id'  => $this->set->tcgdex_id,
+                'name'       => $this->set->name,
+                'logo_url'   => $this->set->logo_url   ? $this->set->logo_url   . '.png' : null,
+                'symbol_url' => $this->set->symbol_url ? $this->set->symbol_url . '.png' : null,
             ]),
             'artist'       => $this->whenLoaded('artist', fn() => [
                 'id'   => $this->artist?->id,
