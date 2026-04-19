@@ -1,59 +1,127 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Pokémon Collection — Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST per l'applicazione Pokémon Collection, costruita con **Laravel** e **MySQL**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Tecnologia | Versione | Utilizzo |
+|---|---|---|
+| PHP | 8.2+ | Linguaggio |
+| Laravel | 11.x | Framework |
+| MySQL | 8.0+ | Database |
+| Laravel Sanctum | — | Autenticazione API (token + cookie) |
+| PragmaRX Google2FA | — | Autenticazione a due fattori (TOTP) |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Requisiti
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- PHP >= 8.2 con estensioni: `pdo_mysql`, `mbstring`, `openssl`, `gd`
+- Composer
+- MySQL 8.0+
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Installazione
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+# Entra nella cartella backend
+cd api
 
-### Premium Partners
+# Installa le dipendenze PHP
+composer install
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# Copia e configura il file d'ambiente
+cp .env.example .env
+php artisan key:generate
 
-## Contributing
+# Configura il database in .env, poi esegui le migration
+php artisan migrate
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# (Opzionale) Popola il database con i dati di seed
+php artisan db:seed
+```
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Avvio in sviluppo
 
-## Security Vulnerabilities
+```bash
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+L'API sarà disponibile su `http://localhost:8000`.
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Struttura
+
+```
+app/
+├── Http/
+│   ├── Controllers/   # Un controller per entità
+│   ├── Requests/      # FormRequest con validazione e messaggi in italiano
+│   └── Resources/     # JSON Resource per serializzazione
+├── Models/            # Eloquent models con SoftDeletes
+└── Policies/          # Autorizzazioni per ruolo admin
+
+routes/
+├── auth.php           # Login, logout, profilo, 2FA
+├── artists.php
+├── rarities.php
+├── card_types.php
+├── conditions.php
+├── languages.php
+├── currencies.php
+└── grading_companies.php
+```
+
+---
+
+## Convenzioni
+
+**Controllers** — ogni entità espone: `index`, `store`, `show`, `update`, `destroy`, `restore`.
+Il metodo `index` accetta `?withTrashed=true` per includere i record eliminati (soft-deleted).
+
+**Soft Delete** — tutti i modelli del catalogo usano `SoftDeletes`. La cancellazione è sempre logica;
+il ripristino avviene tramite `PUT /{id}/restore`.
+
+**Resources** — i campi nullable usano `whenNotNull` così sono omessi dalla risposta quando non valorizzati:
+```php
+'deleted_at' => $this->whenNotNull($this->deleted_at?->toDateTimeString()),
+```
+
+**Autorizzazioni** — le route di scrittura richiedono `auth:sanctum` + middleware `admin`.
+Le Policy gestiscono i permessi per ogni modello.
+
+---
+
+## Entità Catalogo
+
+| Endpoint | Campi |
+|---|---|
+| `/artists` | `name` |
+| `/rarities` | `name` |
+| `/card-types` | `name` |
+| `/conditions` | `code`, `name` |
+| `/languages` | `code`, `name`, `country_code` |
+| `/currencies` | `code`, `symbol` |
+| `/grading-companies` | `name` |
+
+---
+
+## Autenticazione
+
+| Endpoint | Metodo | Descrizione |
+|---|---|---|
+| `/auth/login` | POST | Login con email e password |
+| `/auth/logout` | POST | Logout |
+| `/auth/me` | GET | Dati utente autenticato |
+| `/auth/me` | PUT | Aggiorna username |
+| `/auth/password` | PUT | Cambia password |
+| `/auth/2fa/enable` | POST | Avvia setup 2FA (genera QR + secret) |
+| `/auth/2fa/confirm` | POST | Conferma e attiva il 2FA |
+| `/auth/2fa/cancel` | POST | Annulla il setup 2FA in corso |
+| `/auth/2fa/disable` | POST | Disattiva il 2FA (richiede codice TOTP) |

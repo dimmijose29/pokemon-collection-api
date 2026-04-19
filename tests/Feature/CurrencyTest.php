@@ -165,4 +165,53 @@ class CurrencyTest extends TestCase
 
         $this->assertDatabaseHas('currencies', ['id' => $currency->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_currency()
+    {
+        $currency = Currency::factory()->create();
+        $currency->delete();
+        $this->assertSoftDeleted('currencies', ['id' => $currency->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/currencies/{$currency->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('currencies', [
+            'id' => $currency->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        Currency::factory()->count(2)->create();
+        $deleted = Currency::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/currencies')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/currencies?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_currency()
+    {
+        $response = $this->postJson('/api/currencies', [
+            'symbol' => 'X',
+            'code' => 'XXX',
+        ]);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('currencies', ['code' => 'XXX']);
+    }
 }

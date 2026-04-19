@@ -159,4 +159,50 @@ class RarityTest extends TestCase
 
         $this->assertDatabaseHas('rarities', ['id' => $rarity->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_rarity()
+    {
+        $rarity = Rarity::factory()->create();
+        $rarity->delete();
+        $this->assertSoftDeleted('rarities', ['id' => $rarity->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/rarities/{$rarity->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('rarities', [
+            'id' => $rarity->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        Rarity::factory()->count(2)->create();
+        $deleted = Rarity::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/rarities')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/rarities?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_rarity()
+    {
+        $response = $this->postJson('/api/rarities', ['name' => 'Rarity Non Autenticata']);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('rarities', ['name' => 'Rarity Non Autenticata']);
+    }
 }

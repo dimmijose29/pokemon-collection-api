@@ -35,7 +35,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function anyone_can_view_single_granding_company()
+    public function anyone_can_view_single_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create([
             'name' => 'PSA',
@@ -51,7 +51,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_create_granding_company()
+    public function admin_can_create_grading_company()
     {
         $payload = [
             'name' => 'BGS',
@@ -69,7 +69,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_create_granding_company()
+    public function non_admin_cannot_create_grading_company()
     {
         $payload = [
             'name' => 'TAG',
@@ -98,7 +98,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_update_granding_company()
+    public function admin_can_update_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create(['name' => 'PSA']);
             
@@ -119,7 +119,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_update_granding_company()
+    public function non_admin_cannot_update_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
@@ -134,7 +134,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_delete_granding_company()
+    public function admin_can_delete_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
@@ -148,7 +148,7 @@ class GradingCompanyTest extends TestCase
     }
 
     /** @test */
-    public function non_admin_cannot_delete_granding_company()
+    public function non_admin_cannot_delete_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
 
@@ -158,5 +158,51 @@ class GradingCompanyTest extends TestCase
         $response->assertStatus(403);
 
         $this->assertDatabaseHas('grading_companies', ['id' => $gradingCompany->id]);
+    }
+
+    /** @test */
+    public function admin_can_restore_grading_company()
+    {
+        $gradingCompany = GradingCompany::factory()->create();
+        $gradingCompany->delete();
+        $this->assertSoftDeleted('grading_companies', ['id' => $gradingCompany->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/grading-companies/{$gradingCompany->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('grading_companies', [
+            'id' => $gradingCompany->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        GradingCompany::factory()->count(2)->create();
+        $deleted = GradingCompany::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/grading-companies')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/grading-companies?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_grading_company()
+    {
+        $response = $this->postJson('/api/grading-companies', ['name' => 'GradingCompany Non Autenticata']);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('grading_companies', ['name' => 'GradingCompany Non Autenticata']);
     }
 }

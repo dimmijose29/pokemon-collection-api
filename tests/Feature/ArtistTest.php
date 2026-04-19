@@ -159,4 +159,50 @@ class ArtistTest extends TestCase
 
         $this->assertDatabaseHas('artists', ['id' => $artist->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_artist()
+    {
+        $artist = Artist::factory()->create();
+        $artist->delete();
+        $this->assertSoftDeleted('artists', ['id' => $artist->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/artists/{$artist->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('artists', [
+            'id' => $artist->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        Artist::factory()->count(2)->create();
+        $deleted = Artist::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/artists')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/artists?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_artist()
+    {
+        $response = $this->postJson('/api/artists', ['name' => 'Artista Non Autenticato']);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('artists', ['name' => 'Artista Non Autenticato']);
+    }
 }

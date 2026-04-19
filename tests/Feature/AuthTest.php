@@ -86,10 +86,11 @@ class AuthTest extends TestCase
         $this->assertNotNull($response->json('secret'));
         $this->assertStringStartsWith('data:image/svg+xml;base64,', $response->json('qr_code'));
 
+        // enable salva il secret ma NON attiva ancora la 2FA (serve confirm)
         $this->assertDatabaseHas('users', [
             'id' => $this->user->id,
             'totp_secret' => $response->json('secret'),
-            'is_2fa_enabled' => true,
+            'is_2fa_enabled' => false,
         ]);
     }
 
@@ -197,6 +198,55 @@ class AuthTest extends TestCase
                     'message' => 'Inserisci il codice 2FA',
                 ])
                 ->assertJsonMissing(['token']); // NON deve dare token definitivo
+    }
+
+    /** @test */
+    public function user_can_cancel_two_factor_setup()
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        // Prima abilita il setup (salva il secret senza confermare)
+        $this->postJson('/api/auth/2fa/enable')->assertStatus(200);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $this->user->id,
+            'is_2fa_enabled' => false,
+        ]);
+        $this->assertNotNull($this->user->fresh()->totp_secret);
+
+        // Annulla il setup
+        $response = $this->postJson('/api/auth/2fa/cancel');
+
+        $response->assertStatus(200)
+                 ->assertJson(['message' => 'Setup 2FA annullato']);
+
+        // Il secret deve essere rimosso, la 2FA rimane disabilitata
+        $this->assertDatabaseHas('users', [
+            'id' => $this->user->id,
+            'totp_secret' => null,
+            'is_2fa_enabled' => false,
+        ]);
+    }
+
+    /** @test */
+    public function cancel_two_factor_setup_fails_if_already_confirmed()
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        // Abilita e conferma la 2FA
+        $enable = $this->postJson('/api/auth/2fa/enable');
+        $secret = $enable->json('secret');
+
+        $google2fa = app(Google2FA::class);
+        $code = $google2fa->getCurrentOtp($secret);
+
+        $this->postJson('/api/auth/2fa/confirm', ['code' => $code])->assertStatus(200);
+
+        // Tentare di annullare una 2FA già attiva deve restituire 400
+        $response = $this->postJson('/api/auth/2fa/cancel');
+
+        $response->assertStatus(400)
+                 ->assertJson(['message' => 'Usa la disattivazione per rimuovere la 2FA attiva']);
     }
 
     /** @test */

@@ -177,4 +177,54 @@ class LanguageTest extends TestCase
 
         $this->assertDatabaseHas('languages', ['id' => $language->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_language()
+    {
+        $language = Language::factory()->create();
+        $language->delete();
+        $this->assertSoftDeleted('languages', ['id' => $language->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/languages/{$language->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('languages', [
+            'id' => $language->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        Language::factory()->count(2)->create();
+        $deleted = Language::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/languages')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/languages?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_language()
+    {
+        $response = $this->postJson('/api/languages', [
+            'code' => 'ZZ',
+            'name' => 'Lingua Non Autenticata',
+            'country_code' => 'ZZ',
+        ]);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('languages', ['code' => 'ZZ']);
+    }
 }

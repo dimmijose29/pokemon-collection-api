@@ -159,4 +159,50 @@ class CardTypeTest extends TestCase
 
         $this->assertDatabaseHas('card_types', ['id' => $cardType->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_card_type()
+    {
+        $cardType = CardType::factory()->create();
+        $cardType->delete();
+        $this->assertSoftDeleted('card_types', ['id' => $cardType->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/card-types/{$cardType->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('card_types', [
+            'id' => $cardType->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        CardType::factory()->count(2)->create();
+        $deleted = CardType::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/card-types')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/card-types?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_card_type()
+    {
+        $response = $this->postJson('/api/card-types', ['name' => 'CardType Non Autenticato']);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('card_types', ['name' => 'CardType Non Autenticato']);
+    }
 }

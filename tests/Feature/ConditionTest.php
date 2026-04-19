@@ -165,4 +165,53 @@ class ConditionTest extends TestCase
 
         $this->assertDatabaseHas('conditions', ['id' => $condition->id]);
     }
+
+    /** @test */
+    public function admin_can_restore_condition()
+    {
+        $condition = Condition::factory()->create();
+        $condition->delete();
+        $this->assertSoftDeleted('conditions', ['id' => $condition->id]);
+
+        $response = $this->actingAs($this->admin)
+                         ->putJson("/api/conditions/{$condition->id}/restore");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('conditions', [
+            'id' => $condition->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /** @test */
+    public function index_returns_soft_deleted_with_trashed_param()
+    {
+        Condition::factory()->count(2)->create();
+        $deleted = Condition::factory()->create();
+        $deleted->delete();
+
+        // Senza withTrashed: solo i 2 attivi
+        $this->getJson('/api/conditions')
+             ->assertStatus(200)
+             ->assertJsonCount(2);
+
+        // Con withTrashed=true: tutti e 3
+        $this->getJson('/api/conditions?withTrashed=true')
+             ->assertStatus(200)
+             ->assertJsonCount(3);
+    }
+
+    /** @test */
+    public function unauthenticated_cannot_create_condition()
+    {
+        $response = $this->postJson('/api/conditions', [
+            'name' => 'Condition Non Autenticata',
+            'code' => 'XX',
+        ]);
+
+        $response->assertStatus(401);
+
+        $this->assertDatabaseMissing('conditions', ['name' => 'Condition Non Autenticata']);
+    }
 }
