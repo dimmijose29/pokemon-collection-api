@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Card extends Model
 {
@@ -59,7 +60,19 @@ class Card extends Model
     }
 
     /**
-     * Restituisce il prezzo più recente per una data fonte e tipo.
+     * HasOne eager-loadable: prezzo Cardmarket trend più recente.
+     */
+    public function latestCardmarketPrice(): HasOne
+    {
+        return $this->hasOne(CardPrice::class)
+            ->ofMany(
+                ['recorded_at' => 'max'],
+                fn($q) => $q->where('source', 'cardmarket')->where('price_type', 'trend')
+            );
+    }
+
+    /**
+     * Restituisce il prezzo più recente per una data fonte e tipo (uso non-eager).
      */
     public function latestPrice(string $source = 'cardmarket', string $priceType = 'trend'): ?CardPrice
     {

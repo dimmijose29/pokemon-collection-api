@@ -37,6 +37,7 @@ class CardResource extends JsonResource
                 'name' => $this->cardType?->name,
             ]),
             'translations' => CardTranslationResource::collection($this->whenLoaded('translations')),
+            'price'        => $this->whenLoaded('latestCardmarketPrice', fn() => $this->latestCardmarketPrice?->price !== null ? (float) $this->latestCardmarketPrice->price : null),
             'created_at'   => $this->created_at?->toDateTimeString(),
             'deleted_at'   => $this->whenNotNull($this->deleted_at?->toDateTimeString()),
         ];

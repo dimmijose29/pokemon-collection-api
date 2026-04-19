@@ -46,7 +46,7 @@ class SetRequest extends FormRequest
                 Rule::unique('sets', 'tcgdex_id')->ignore($setId),
             ],
             'name'                => ['required', 'string', 'max:100'],
-            'series'              => ['nullable', 'string', 'max:100'],
+            'series_id'           => ['nullable', 'integer', 'exists:series,id'],
             'card_count_official' => ['nullable', 'integer', 'min:0'],
             'card_count_total'    => ['nullable', 'integer', 'min:0'],
             'release_date'        => ['nullable', 'date'],

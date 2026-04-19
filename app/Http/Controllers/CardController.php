@@ -14,8 +14,9 @@ class CardController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Card::with(['set', 'rarity', 'artist', 'cardType'])
+        $query = Card::with(['set', 'rarity', 'artist', 'cardType', 'translations', 'latestCardmarketPrice'])
             ->orderBy('set_id')
+            ->orderByRaw('CAST(local_id AS UNSIGNED)')
             ->orderBy('local_id');
 
         if ($request->boolean('withTrashed')) {

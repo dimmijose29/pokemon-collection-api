@@ -14,25 +14,25 @@ class SetController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Set::orderBy('release_date', 'desc')->orderBy('name');
+        $query = Set::with('series')->orderBy('release_date', 'desc')->orderBy('name');
 
         if ($request->boolean('withTrashed')) {
             $query->withTrashed();
         }
 
-        if ($request->filled('series')) {
-            $query->where('series', $request->string('series'));
+        if ($request->filled('series_id')) {
+            $query->where('series_id', $request->integer('series_id'));
         }
 
         return response()->json(SetResource::collection($query->get()));
     }
 
     /**
-     * Dettaglio set con traduzioni caricate.
+     * Dettaglio set con traduzioni e serie caricate.
      */
     public function show(Set $set)
     {
-        $set->load(['translations.language']);
+        $set->load(['translations.language', 'series']);
 
         return response()->json(new SetResource($set));
     }
@@ -40,6 +40,7 @@ class SetController extends Controller
     public function store(SetRequest $request)
     {
         $set = Set::create($request->validated());
+        $set->load('series');
 
         return response()->json(new SetResource($set), 201);
     }
@@ -47,6 +48,7 @@ class SetController extends Controller
     public function update(SetRequest $request, Set $set)
     {
         $set->update($request->validated());
+        $set->load('series');
 
         return response()->json(new SetResource($set));
     }
@@ -62,6 +64,7 @@ class SetController extends Controller
     {
         $set = Set::withTrashed()->findOrFail($set);
         $set->restore();
+        $set->load('series');
 
         return response()->json(new SetResource($set));
     }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Language;
+use App\Models\Series;
 use App\Models\Set;
 use App\Services\TcgdexService;
 use Illuminate\Bus\Queueable;
@@ -54,11 +55,23 @@ class SyncSetsJob implements ShouldQueue
                 // Dettaglio completo del set per avere cardCount
                 $detail = $tcgdex->withLang('en')->fetchSet($tcgdexId);
 
+                // Upsert della serie
+                $serieName   = $detail['serie']['name'] ?? $setData['serie']['name'] ?? null;
+                $serieTcgId  = $detail['serie']['id']   ?? $setData['serie']['id']   ?? null;
+                $seriesModel = null;
+
+                if ($serieName) {
+                    $seriesModel = Series::updateOrCreate(
+                        ['tcgdex_id' => $serieTcgId],
+                        ['name' => $serieName]
+                    );
+                }
+
                 Set::updateOrCreate(
                     ['tcgdex_id' => $tcgdexId],
                     [
                         'name'                => $setData['name'] ?? $tcgdexId,
-                        'series'              => $setData['serie']['name'] ?? null,
+                        'series_id'           => $seriesModel?->id,
                         'card_count_official' => $detail['cardCount']['official'] ?? ($setData['cardCount']['official'] ?? 0),
                         'card_count_total'    => $detail['cardCount']['total'] ?? ($setData['cardCount']['total'] ?? 0),
                         'release_date'        => $detail['releaseDate'] ?? null,

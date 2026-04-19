@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Set extends Model
 {
@@ -14,7 +15,7 @@ class Set extends Model
     protected $fillable = [
         'tcgdex_id',
         'name',
-        'series',
+        'series_id',
         'card_count_official',
         'card_count_total',
         'release_date',
@@ -25,6 +26,11 @@ class Set extends Model
     protected $casts = [
         'release_date' => 'date',
     ];
+
+    public function series(): BelongsTo
+    {
+        return $this->belongsTo(Series::class);
+    }
 
     public function translations(): HasMany
     {
