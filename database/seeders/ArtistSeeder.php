@@ -1,13 +1,17 @@
 <?php
+
 namespace Database\Seeders;
 
-use App\Models\Artist;
 use Illuminate\Database\Seeder;
 
-class CardTypeSeeder extends Seeder
+/**
+ * Gli artisti vengono sincronizzati da TCGdex tramite SyncCatalogSeeder.
+ * Questo seeder è mantenuto per compatibilità ma non fa nulla.
+ */
+class ArtistSeeder extends Seeder
 {
     public function run(): void
     {
-        Artist::factory()->count(10)->create();
+        // Gestito da SyncCatalogSeeder → SyncCatalogJob::syncArtists()
     }
 }

@@ -2,28 +2,30 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class currencieseeder extends Seeder
+class CurrencySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $currencies = [
-            ['code' => 'USD','name' => 'US Dollar','symbol' => '$','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
-            ['code' => 'EUR','name' => 'Euro','symbol' => '€','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
-            ['code' => 'GBP','name' => 'British Pound','symbol' => '£','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
-            ['code' => 'JPY','name' => 'Japanese Yen','symbol' => '¥','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
-            ['code' => 'CAD','name' => 'Canadian Dollar','symbol' => 'C$','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
-            ['code' => 'AUD','name' => 'Australian Dollar','symbol' => 'A$','created_at' => \Carbon\Carbon::now(),'updated_at' => \Carbon\Carbon::now()],
+            ['code' => 'EUR', 'symbol' => '€'],
+            ['code' => 'USD', 'symbol' => '$'],
+            ['code' => 'GBP', 'symbol' => '£'],
+            ['code' => 'JPY', 'symbol' => '¥'],
+            ['code' => 'CAD', 'symbol' => 'C$'],
+            ['code' => 'AUD', 'symbol' => 'A$'],
         ];
 
         foreach ($currencies as $currency) {
-            DB::table('currencies')->insert($currency);
+            DB::table('currencies')->updateOrInsert(
+                ['code' => $currency['code']],
+                array_merge($currency, [
+                    'created_at' => \Carbon\Carbon::now(),
+                    'updated_at' => \Carbon\Carbon::now(),
+                ])
+            );
         }
     }
 }

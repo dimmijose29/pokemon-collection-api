@@ -65,7 +65,10 @@ class ConditionSeeder extends Seeder
         ];
 
         foreach ($conditions as $condition) {
-            DB::table('conditions')->insert($condition);
+            DB::table('conditions')->updateOrInsert(
+                ['code' => $condition['code']],
+                $condition
+            );
         }
     }
 }
