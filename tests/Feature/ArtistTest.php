@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Artist;
+namespace Tests\Feature;
 
 use App\Models\Artist;
 use App\Models\User;

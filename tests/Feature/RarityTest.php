@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Rarity;
+namespace Tests\Feature;
 
 use App\Models\Rarity;
 use App\Models\User;

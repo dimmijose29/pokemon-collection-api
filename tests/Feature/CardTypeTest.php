@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\CardType;
+namespace Tests\Feature;
 
 use App\Models\CardType;
 use App\Models\User;

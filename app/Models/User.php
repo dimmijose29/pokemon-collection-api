@@ -29,18 +29,11 @@ class User extends Authenticatable
         'totp_secret'               => 'encrypted',
         'totp_last_used_timestamp'  => 'integer',
         'email_verified_at'         => 'datetime',
-        'last_login_at'             => 'datetime',
         'two_factor_recovery_codes' => 'array',
         'two_factor_confirmed_at'   => 'datetime',
         'birth_year'                => 'integer',
         'password' => 'hashed',
     ];
-
-    // Metodo helper per verificare 2FA
-    public function hasEnabledTwoFactor(): bool
-    {
-        return $this->is_2fa_enabled && $this->totp_secret !== null && $this->two_factor_confirmed_at !== null;
-    }
 
     // // Futuro: relazione con collections
     // public function collections()

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Condition;
+namespace Tests\Feature;
 
 use App\Models\Condition;
 use App\Models\User;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Set;
+namespace Tests\Feature;
 
 use App\Models\Series;
 use App\Models\Set;

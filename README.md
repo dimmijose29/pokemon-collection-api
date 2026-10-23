@@ -9,50 +9,80 @@ API REST per l'applicazione Pokémon Collection, costruita con **Laravel** e **M
 | Tecnologia | Versione | Utilizzo |
 |---|---|---|
 | PHP | 8.2+ | Linguaggio |
-| Laravel | 11.x | Framework |
-| MySQL | 8.0+ | Database |
-| Laravel Sanctum | — | Autenticazione API (token + cookie) |
-| PragmaRX Google2FA | — | Autenticazione a due fattori (TOTP) |
+| Laravel | 12.x | Framework |
+| MySQL | 8.0+ | Database (obbligatorio: alcune query usano funzioni MySQL) |
+| Laravel Sanctum | 4.x | Autenticazione API con token Bearer |
+| PragmaRX Google2FA | 2.x | Autenticazione a due fattori (TOTP) |
+| TCGdex | — | Sorgente esterna del catalogo (set, carte, prezzi) |
 
 ---
 
 ## Requisiti
 
-- PHP >= 8.2 con estensioni: `pdo_mysql`, `mbstring`, `openssl`, `gd`
+- PHP >= 8.2 con estensioni: `pdo_mysql`, `mbstring`, `openssl`, `pcntl` (timeout dei job), `gd` (test)
 - Composer
 - MySQL 8.0+
+- Accesso a internet verso `api.tcgdex.net` (seed e sincronizzazione)
+
+Non serve Node.js: il progetto è solo API.
 
 ---
 
 ## Installazione
 
 ```bash
-# Entra nella cartella backend
-cd api
-
-# Installa le dipendenze PHP
 composer install
-
-# Copia e configura il file d'ambiente
 cp .env.example .env
 php artisan key:generate
 
-# Configura il database in .env, poi esegui le migration
+# Configura database, mail e FRONTEND_URL in .env, poi:
 php artisan migrate
-
-# (Opzionale) Popola il database con i dati di seed
-php artisan db:seed
+php artisan db:seed   # admin, dati statici e catalogo TCGdex (~2 minuti)
 ```
+
+Il seeder crea l'admin `ADMIN_EMAIL`; se `ADMIN_PASSWORD` è vuota genera una password casuale e la stampa una sola volta.
 
 ---
 
 ## Avvio in sviluppo
 
 ```bash
-php artisan serve
+php artisan serve          # API su http://localhost:8000
+php artisan queue:work     # job di sincronizzazione
+php artisan schedule:work  # pulizia giornaliera dei token scaduti
 ```
 
-L'API sarà disponibile su `http://localhost:8000`.
+Le carte si importano a parte, perché la sincronizzazione completa è lunga:
+
+```bash
+php artisan sync:cards          # tutti i set
+php artisan sync:cards swsh1    # un solo set
+php artisan sync:cards --queue  # in coda
+```
+
+---
+
+## Test
+
+```bash
+php artisan test
+```
+
+I test usano SQLite in memoria (`phpunit.xml`). Se le variabili `DB_*` sono già impostate nell'ambiente
+(ad esempio dentro un container), sovrascrivono `phpunit.xml`: in quel caso lanciare
+`DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test`, altrimenti `RefreshDatabase` svuota il database configurato.
+
+---
+
+## Variabili d'ambiente principali
+
+| Variabile | Uso |
+|---|---|
+| `FRONTEND_URL` | URL del pannello admin, usato nei link delle email (reset password) |
+| `CORS_ALLOWED_ORIGINS` | Origini ammesse dal CORS, separate da virgola |
+| `SANCTUM_EXPIRATION` | Durata dei token in minuti (default 7 giorni) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Utente admin creato dal seeder |
+| `DB_QUEUE_RETRY_AFTER` | Deve superare il timeout dei job (600 s): usare almeno 660 |
 
 ---
 
@@ -68,15 +98,17 @@ app/
 └── Policies/          # Autorizzazioni per ruolo admin
 
 routes/
-├── auth.php           # Login, logout, profilo, 2FA
-├── artists.php
-├── rarities.php
-├── card_types.php
-├── conditions.php
-├── languages.php
-├── currencies.php
-└── grading_companies.php
+├── auth.php           # Login, logout, profilo, password, 2FA
+├── series.php, sets.php, cards.php
+├── artists.php, rarities.php, card_types.php
+├── conditions.php, languages.php, currencies.php, grading_companies.php
+├── users.php          # Gestione utenti (solo admin)
+├── stats.php          # Statistiche dashboard
+└── console.php        # Schedulazione
 ```
+
+La sincronizzazione con TCGdex è in `app/Services/TcgdexService.php`, `app/Jobs/Sync*Job.php`
+e nei comandi `app/Console/Commands/Sync*Command.php`.
 
 ---
 
@@ -109,6 +141,9 @@ Le Policy gestiscono i permessi per ogni modello.
 | `/languages` | `code`, `name`, `country_code` |
 | `/currencies` | `code`, `symbol` |
 | `/grading-companies` | `name` |
+| `/series` | `name`, `tcgdex_id`, `logo_url` |
+| `/sets` | `tcgdex_id`, `name`, `series_id`, conteggi, `release_date` |
+| `/cards` | `tcgdex_id`, `set_id`, `local_id`, rarità, tipo, artista |
 
 ---
 
@@ -116,12 +151,23 @@ Le Policy gestiscono i permessi per ogni modello.
 
 | Endpoint | Metodo | Descrizione |
 |---|---|---|
-| `/auth/login` | POST | Login con email e password |
-| `/auth/logout` | POST | Logout |
+| `/auth/register` | POST | Registrazione |
+| `/auth/login` | POST | Login con email o username; con 2FA attiva restituisce un `temp_token` |
+| `/auth/2fa/verify` | POST | Completa il login 2FA (`temp_token` + codice) |
+| `/auth/forgot-password` | POST | Invia il link di reset via email |
+| `/auth/reset-password` | POST | Reimposta la password con il token del link |
+| `/auth/logout` | POST | Logout (revoca il token corrente) |
 | `/auth/me` | GET | Dati utente autenticato |
 | `/auth/me` | PUT | Aggiorna username |
-| `/auth/password` | PUT | Cambia password |
+| `/auth/password` | PUT | Cambia password (richiede quella attuale, revoca le altre sessioni) |
 | `/auth/2fa/enable` | POST | Avvia setup 2FA (genera QR + secret) |
 | `/auth/2fa/confirm` | POST | Conferma e attiva il 2FA |
 | `/auth/2fa/cancel` | POST | Annulla il setup 2FA in corso |
-| `/auth/2fa/disable` | POST | Disattiva il 2FA (richiede codice TOTP) |
+| `/auth/2fa/disable` | POST | Disattiva il 2FA (richiede password e codice TOTP) |
+
+Sicurezza:
+
+- il `temp_token` della 2FA vale 5 minuti e non autentica nessun'altra rotta;
+- un codice TOTP non è riutilizzabile;
+- login, 2FA, recupero password e registrazione hanno un rate limit;
+- gli utenti disattivati perdono subito l'accesso.

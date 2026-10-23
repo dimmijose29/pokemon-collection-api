@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\GradingCompany;
+namespace Tests\Feature;
 
 use App\Models\GradingCompany;
 use App\Models\User;

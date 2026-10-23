@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Currency;
+namespace Tests\Feature;
 
 use App\Models\Currency;
 use App\Models\User;

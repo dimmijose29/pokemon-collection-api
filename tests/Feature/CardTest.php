@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Card;
+namespace Tests\Feature;
 
 use App\Models\Card;
 use App\Models\Set;
