@@ -13,6 +13,7 @@ API REST per l'applicazione Pokémon Collection, costruita con **Laravel** e **M
 | MySQL | 8.0+ | Database (obbligatorio: alcune query usano funzioni MySQL) |
 | Laravel Sanctum | 4.x | Autenticazione API con token Bearer |
 | PragmaRX Google2FA | 9.x | Autenticazione a due fattori (TOTP) |
+| Pest | 4.x | Test |
 | TCGdex | — | Sorgente esterna del catalogo (set, carte, prezzi) |
 
 ---
@@ -65,10 +66,10 @@ php artisan sync:cards --queue  # in coda
 ## Test
 
 ```bash
-php artisan test
+php artisan test     # oppure vendor/bin/pest
 ```
 
-I test usano un database MySQL separato chiamato `testing` (stesso host e utente di `.env`), da creare una volta:
+I test sono scritti con **Pest 4**. Usano un database MySQL separato chiamato `testing` (stesso host e utente di `.env`), da creare una volta:
 
 ```sql
 CREATE DATABASE testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

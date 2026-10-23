@@ -1,231 +1,195 @@
 <?php
 
-namespace Tests\Feature;
-
-use PHPUnit\Framework\Attributes\Test;
 use App\Models\Language;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class LanguageTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    private User $admin;
-    private User $user;
+beforeEach(function () {
+    // Crea admin e utente normale
+    $this->admin = User::factory()->create(['is_admin' => true]);
+    $this->user  = User::factory()->create(['is_admin' => false]);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+test('anyone can view languages list', function () {
+    Language::factory()->count(5)->create();
 
-        // Crea admin e utente normale
-        $this->admin = User::factory()->create(['is_admin' => true]);
-        $this->user  = User::factory()->create(['is_admin' => false]);
-    }
+    $response = $this->getJson('/api/languages');
 
-    #[Test]
-    public function anyone_can_view_languages_list()
-    {
-        Language::factory()->count(5)->create();
+    $response->assertStatus(200)
+             ->assertJsonCount(5);
+});
 
-        $response = $this->getJson('/api/languages');
+test('anyone can view single language', function () {
+    $language = Language::factory()->create([
+        'code' => 'IT',
+        'name' => 'Italiano',
+        'country_code' => 'IT',
+    ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonCount(5);
-    }
+    $response = $this->getJson("/api/languages/{$language->id}");
 
-    #[Test]
-    public function anyone_can_view_single_language()
-    {
-        $language = Language::factory()->create([
-            'code' => 'IT',
-            'name' => 'Italiano',
-            'country_code' => 'IT',
+    $response->assertStatus(200)
+             ->assertJson([
+                 'id' => $language->id,
+                 'code' => 'IT',
+                 'name' => 'Italiano',
+                 'country_code' => 'IT',
+             ]);
+});
+
+test('admin can create language', function () {
+    $payload = [
+        'code' => 'XX',
+        'name' => 'Lingua Test',
+        'country_code' => 'XX',
+    ];
+
+    $response = $this->actingAs($this->admin)
+                     ->postJson('/api/languages', $payload);
+
+    $response->assertStatus(201)
+             ->assertJsonPath('code', 'XX')
+             ->assertJsonPath('name', 'Lingua Test')
+             ->assertJsonPath('country_code', 'XX');
+
+    $this->assertDatabaseHas('languages', [
+        'code' => 'XX',
+        'name' => 'Lingua Test',
+        'country_code' => 'XX',
+    ]);
+});
+
+test('non admin cannot create language', function () {
+    $payload = [
+        'code' => 'yy',
+        'name' => 'Lingua Bloccata',
+    ];
+
+    $response = $this->actingAs($this->user)
+                     ->postJson('/api/languages', $payload);
+
+    $response->assertStatus(403);
+
+    $this->assertDatabaseMissing('languages', ['code' => 'YY']);
+});
+
+test('code must be unique on create', function () {
+    Language::factory()->create(['code' => 'EN', 'name' => 'English']);
+
+    $response = $this->actingAs($this->admin)
+                     ->postJson('/api/languages', [
+                         'code' => 'EN',
+                         'name' => 'Duplicate',
+                     ]);
+
+    $response->assertStatus(422)
+             ->assertJsonValidationErrors('code');
+});
+
+test('admin can update language', function () {
+    $language = Language::factory()->create([
+        'code' => 'FR',
+        'name' => 'Français',
+        'country_code' => 'FR',
         ]);
 
-        $response = $this->getJson("/api/languages/{$language->id}");
+    $payload = [
+    'name' => 'Francese Aggiornato',
+    'code' => 'FR',
+    'country_code' => 'FR',
+];
 
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'id' => $language->id,
-                     'code' => 'IT',
-                     'name' => 'Italiano',
-                     'country_code' => 'IT',
-                 ]);
-    }
+    $response = $this->actingAs($this->admin)
+                     ->putJson("/api/languages/{$language->id}", $payload);
 
-    #[Test]
-    public function admin_can_create_language()
-    {
-        $payload = [
-            'code' => 'XX',
-            'name' => 'Lingua Test',
-            'country_code' => 'XX',
-        ];
+    $response->assertStatus(200)
+             ->assertJsonPath('name', 'Francese Aggiornato');
 
-        $response = $this->actingAs($this->admin)
-                         ->postJson('/api/languages', $payload);
+    $this->assertDatabaseHas('languages', [
+        'id' => $language->id,
+        'name' => 'Francese Aggiornato',
+    ]);
+});
 
-        $response->assertStatus(201)
-                 ->assertJsonPath('code', 'XX')
-                 ->assertJsonPath('name', 'Lingua Test')
-                 ->assertJsonPath('country_code', 'XX');
+test('non admin cannot update language', function () {
+    $language = Language::factory()->create();
 
-        $this->assertDatabaseHas('languages', [
-            'code' => 'XX',
-            'name' => 'Lingua Test',
-            'country_code' => 'XX',
-        ]);
-    }
+    $response = $this->actingAs($this->user)
+                     ->putJson("/api/languages/{$language->id}", [
+                         'name' => 'Aggiornato da non-admin',
+                     ]);
 
-    #[Test]
-    public function non_admin_cannot_create_language()
-    {
-        $payload = [
-            'code' => 'yy',
-            'name' => 'Lingua Bloccata',
-        ];
+    $response->assertStatus(403);
 
-        $response = $this->actingAs($this->user)
-                         ->postJson('/api/languages', $payload);
+    $this->assertDatabaseMissing('languages', ['name' => 'Aggiornato da non-admin']);
+});
 
-        $response->assertStatus(403);
+test('admin can delete language', function () {
+    $language = Language::factory()->create();
 
-        $this->assertDatabaseMissing('languages', ['code' => 'YY']);
-    }
+    $response = $this->actingAs($this->admin)
+                     ->deleteJson("/api/languages/{$language->id}");
 
-    #[Test]
-    public function code_must_be_unique_on_create()
-    {
-        Language::factory()->create(['code' => 'EN', 'name' => 'English']);
+    $response->assertStatus(200);
 
-        $response = $this->actingAs($this->admin)
-                         ->postJson('/api/languages', [
-                             'code' => 'EN',
-                             'name' => 'Duplicate',
-                         ]);
+    $this->assertSoftDeleted('languages', ['id' => $language->id]);
+    // se usi soft deletes
+    // oppure $this->assertDatabaseMissing('languages', ['id' => $language->id]);
+});
 
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors('code');
-    }
+test('non admin cannot delete language', function () {
+    $language = Language::factory()->create();
 
-    #[Test]
-    public function admin_can_update_language()
-    {
-        $language = Language::factory()->create([
-            'code' => 'FR',
-            'name' => 'Français',
-            'country_code' => 'FR',
-            ]);
-            
-            $payload = [
-            'name' => 'Francese Aggiornato',
-            'code' => 'FR',
-            'country_code' => 'FR',
-        ];
+    $response = $this->actingAs($this->user)
+                     ->deleteJson("/api/languages/{$language->id}");
 
-        $response = $this->actingAs($this->admin)
-                         ->putJson("/api/languages/{$language->id}", $payload);
+    $response->assertStatus(403);
 
-        $response->assertStatus(200)
-                 ->assertJsonPath('name', 'Francese Aggiornato');
+    $this->assertDatabaseHas('languages', ['id' => $language->id]);
+});
 
-        $this->assertDatabaseHas('languages', [
-            'id' => $language->id,
-            'name' => 'Francese Aggiornato',
-        ]);
-    }
+test('admin can restore language', function () {
+    $language = Language::factory()->create();
+    $language->delete();
+    $this->assertSoftDeleted('languages', ['id' => $language->id]);
 
-    #[Test]
-    public function non_admin_cannot_update_language()
-    {
-        $language = Language::factory()->create();
+    $response = $this->actingAs($this->admin)
+                     ->putJson("/api/languages/{$language->id}/restore");
 
-        $response = $this->actingAs($this->user)
-                         ->putJson("/api/languages/{$language->id}", [
-                             'name' => 'Aggiornato da non-admin',
-                         ]);
+    $response->assertStatus(200);
 
-        $response->assertStatus(403);
+    $this->assertDatabaseHas('languages', [
+        'id' => $language->id,
+        'deleted_at' => null,
+    ]);
+});
 
-        $this->assertDatabaseMissing('languages', ['name' => 'Aggiornato da non-admin']);
-    }
+test('index returns soft deleted with trashed param', function () {
+    Language::factory()->count(2)->create();
+    $deleted = Language::factory()->create();
+    $deleted->delete();
 
-    #[Test]
-    public function admin_can_delete_language()
-    {
-        $language = Language::factory()->create();
+    // Senza withTrashed: solo i 2 attivi
+    $this->getJson('/api/languages')
+         ->assertStatus(200)
+         ->assertJsonCount(2);
 
-        $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/languages/{$language->id}");
+    // Con withTrashed=true: tutti e 3
+    $this->getJson('/api/languages?withTrashed=true')
+         ->assertStatus(200)
+         ->assertJsonCount(3);
+});
 
-        $response->assertStatus(200);
+test('unauthenticated cannot create language', function () {
+    $response = $this->postJson('/api/languages', [
+        'code' => 'ZZ',
+        'name' => 'Lingua Non Autenticata',
+        'country_code' => 'ZZ',
+    ]);
 
-        $this->assertSoftDeleted('languages', ['id' => $language->id]); // se usi soft deletes
-        // oppure $this->assertDatabaseMissing('languages', ['id' => $language->id]);
-    }
+    $response->assertStatus(401);
 
-    #[Test]
-    public function non_admin_cannot_delete_language()
-    {
-        $language = Language::factory()->create();
-
-        $response = $this->actingAs($this->user)
-                         ->deleteJson("/api/languages/{$language->id}");
-
-        $response->assertStatus(403);
-
-        $this->assertDatabaseHas('languages', ['id' => $language->id]);
-    }
-
-    #[Test]
-    public function admin_can_restore_language()
-    {
-        $language = Language::factory()->create();
-        $language->delete();
-        $this->assertSoftDeleted('languages', ['id' => $language->id]);
-
-        $response = $this->actingAs($this->admin)
-                         ->putJson("/api/languages/{$language->id}/restore");
-
-        $response->assertStatus(200);
-
-        $this->assertDatabaseHas('languages', [
-            'id' => $language->id,
-            'deleted_at' => null,
-        ]);
-    }
-
-    #[Test]
-    public function index_returns_soft_deleted_with_trashed_param()
-    {
-        Language::factory()->count(2)->create();
-        $deleted = Language::factory()->create();
-        $deleted->delete();
-
-        // Senza withTrashed: solo i 2 attivi
-        $this->getJson('/api/languages')
-             ->assertStatus(200)
-             ->assertJsonCount(2);
-
-        // Con withTrashed=true: tutti e 3
-        $this->getJson('/api/languages?withTrashed=true')
-             ->assertStatus(200)
-             ->assertJsonCount(3);
-    }
-
-    #[Test]
-    public function unauthenticated_cannot_create_language()
-    {
-        $response = $this->postJson('/api/languages', [
-            'code' => 'ZZ',
-            'name' => 'Lingua Non Autenticata',
-            'country_code' => 'ZZ',
-        ]);
-
-        $response->assertStatus(401);
-
-        $this->assertDatabaseMissing('languages', ['code' => 'ZZ']);
-    }
-}
+    $this->assertDatabaseMissing('languages', ['code' => 'ZZ']);
+});

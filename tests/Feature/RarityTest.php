@@ -1,209 +1,173 @@
 <?php
 
-namespace Tests\Feature;
-
-use PHPUnit\Framework\Attributes\Test;
 use App\Models\Rarity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class RarityTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    private User $admin;
-    private User $user;
+beforeEach(function () {
+    // Crea admin e utente normale
+    $this->admin = User::factory()->create(['is_admin' => true]);
+    $this->user  = User::factory()->create(['is_admin' => false]);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+test('anyone can view rarities list', function () {
+    Rarity::factory()->count(5)->create();
 
-        // Crea admin e utente normale
-        $this->admin = User::factory()->create(['is_admin' => true]);
-        $this->user  = User::factory()->create(['is_admin' => false]);
-    }
+    $response = $this->getJson('/api/rarities');
 
-    #[Test]
-    public function anyone_can_view_rarities_list()
-    {
-        Rarity::factory()->count(5)->create();
+    $response->assertStatus(200)
+             ->assertJsonCount(5);
+});
 
-        $response = $this->getJson('/api/rarities');
+test('anyone can view single rarity', function () {
+    $rarity = Rarity::factory()->create([
+        'name' => 'Common',
+    ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonCount(5);
-    }
+    $response = $this->getJson("/api/rarities/{$rarity->id}");
 
-    #[Test]
-    public function anyone_can_view_single_rarity()
-    {
-        $rarity = Rarity::factory()->create([
-            'name' => 'Common',
-        ]);
+    $response->assertStatus(200)
+             ->assertJson([
+                 'id' => $rarity->id,
+                 'name' => 'Common',
+             ]);
+});
 
-        $response = $this->getJson("/api/rarities/{$rarity->id}");
+test('admin can create rarity', function () {
+    $payload = [
+        'name' => 'Reverse Holo',
+    ];
 
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'id' => $rarity->id,
-                     'name' => 'Common',
-                 ]);
-    }
+    $response = $this->actingAs($this->admin)
+                     ->postJson('/api/rarities', $payload);
 
-    #[Test]
-    public function admin_can_create_rarity()
-    {
-        $payload = [
-            'name' => 'Reverse Holo',
-        ];
+    $response->assertStatus(201)
+             ->assertJsonPath('name', 'Reverse Holo');
 
-        $response = $this->actingAs($this->admin)
-                         ->postJson('/api/rarities', $payload);
+    $this->assertDatabaseHas('rarities', [
+        'name' => 'Reverse Holo',
+    ]);
+});
 
-        $response->assertStatus(201)
-                 ->assertJsonPath('name', 'Reverse Holo');
+test('non admin cannot create rarity', function () {
+    $payload = [
+        'name' => 'EX',
+    ];
 
-        $this->assertDatabaseHas('rarities', [
-            'name' => 'Reverse Holo',
-        ]);
-    }
+    $response = $this->actingAs($this->user)
+                     ->postJson('/api/rarities', $payload);
 
-    #[Test]
-    public function non_admin_cannot_create_rarity()
-    {
-        $payload = [
-            'name' => 'EX',
-        ];
+    $response->assertStatus(403);
 
-        $response = $this->actingAs($this->user)
-                         ->postJson('/api/rarities', $payload);
+    $this->assertDatabaseMissing('rarities', ['name' => 'EX']);
+});
 
-        $response->assertStatus(403);
+test('code must be unique on create', function () {
+    Rarity::factory()->create(['name' => 'VMAX']);
 
-        $this->assertDatabaseMissing('rarities', ['name' => 'EX']);
-    }
+    $response = $this->actingAs($this->admin)
+                     ->postJson('/api/rarities', [
+                         'name' => 'VMAX', // nome già esistente
+                     ]);
 
-    #[Test]
-    public function code_must_be_unique_on_create()
-    {
-        Rarity::factory()->create(['name' => 'VMAX']);
+    $response->assertStatus(422)
+             ->assertJsonValidationErrors('name');
+});
 
-        $response = $this->actingAs($this->admin)
-                         ->postJson('/api/rarities', [
-                             'name' => 'VMAX', // nome già esistente
-                         ]);
+test('admin can update rarity', function () {
+    $rarity = Rarity::factory()->create(['name' => 'VSTAR']);
 
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors('name');
-    }
+    $payload = [
+    'name' => 'VMAX'
+];
 
-    #[Test]
-    public function admin_can_update_rarity()
-    {
-        $rarity = Rarity::factory()->create(['name' => 'VSTAR']);
-            
-            $payload = [
-            'name' => 'VMAX'
-        ];
+    $response = $this->actingAs($this->admin)
+                     ->putJson("/api/rarities/{$rarity->id}", $payload);
 
-        $response = $this->actingAs($this->admin)
-                         ->putJson("/api/rarities/{$rarity->id}", $payload);
+    $response->assertStatus(200)
+             ->assertJsonPath('name', 'VMAX');
 
-        $response->assertStatus(200)
-                 ->assertJsonPath('name', 'VMAX');
+    $this->assertDatabaseHas('rarities', [
+        'id' => $rarity->id,
+        'name' => 'VMAX',
+    ]);
+});
 
-        $this->assertDatabaseHas('rarities', [
-            'id' => $rarity->id,
-            'name' => 'VMAX',
-        ]);
-    }
+test('non admin cannot update rarity', function () {
+    $rarity = Rarity::factory()->create();
 
-    #[Test]
-    public function non_admin_cannot_update_rarity()
-    {
-        $rarity = Rarity::factory()->create();
+    $response = $this->actingAs($this->user)
+                     ->putJson("/api/rarities/{$rarity->id}", [
+                         'name' => 'Aggiornato da non-admin',
+                     ]);
 
-        $response = $this->actingAs($this->user)
-                         ->putJson("/api/rarities/{$rarity->id}", [
-                             'name' => 'Aggiornato da non-admin',
-                         ]);
+    $response->assertStatus(403);
 
-        $response->assertStatus(403);
+    $this->assertDatabaseMissing('rarities', ['name' => 'Aggiornato da non-admin']);
+});
 
-        $this->assertDatabaseMissing('rarities', ['name' => 'Aggiornato da non-admin']);
-    }
+test('admin can delete rarity', function () {
+    $rarity = Rarity::factory()->create();
 
-    #[Test]
-    public function admin_can_delete_rarity()
-    {
-        $rarity = Rarity::factory()->create();
+    $response = $this->actingAs($this->admin)
+                     ->deleteJson("/api/rarities/{$rarity->id}");
 
-        $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/rarities/{$rarity->id}");
+    $response->assertStatus(200);
 
-        $response->assertStatus(200);
+    $this->assertSoftDeleted('rarities', ['id' => $rarity->id]);
+    // se usi soft deletes
+    // oppure $this->assertDatabaseMissing('rarities', ['id' => $rarity->id]);
+});
 
-        $this->assertSoftDeleted('rarities', ['id' => $rarity->id]); // se usi soft deletes
-        // oppure $this->assertDatabaseMissing('rarities', ['id' => $rarity->id]);
-    }
+test('non admin cannot delete rarity', function () {
+    $rarity = Rarity::factory()->create();
 
-    #[Test]
-    public function non_admin_cannot_delete_rarity()
-    {
-        $rarity = Rarity::factory()->create();
+    $response = $this->actingAs($this->user)
+                     ->deleteJson("/api/rarities/{$rarity->id}");
 
-        $response = $this->actingAs($this->user)
-                         ->deleteJson("/api/rarities/{$rarity->id}");
+    $response->assertStatus(403);
 
-        $response->assertStatus(403);
+    $this->assertDatabaseHas('rarities', ['id' => $rarity->id]);
+});
 
-        $this->assertDatabaseHas('rarities', ['id' => $rarity->id]);
-    }
+test('admin can restore rarity', function () {
+    $rarity = Rarity::factory()->create();
+    $rarity->delete();
+    $this->assertSoftDeleted('rarities', ['id' => $rarity->id]);
 
-    #[Test]
-    public function admin_can_restore_rarity()
-    {
-        $rarity = Rarity::factory()->create();
-        $rarity->delete();
-        $this->assertSoftDeleted('rarities', ['id' => $rarity->id]);
+    $response = $this->actingAs($this->admin)
+                     ->putJson("/api/rarities/{$rarity->id}/restore");
 
-        $response = $this->actingAs($this->admin)
-                         ->putJson("/api/rarities/{$rarity->id}/restore");
+    $response->assertStatus(200);
 
-        $response->assertStatus(200);
+    $this->assertDatabaseHas('rarities', [
+        'id' => $rarity->id,
+        'deleted_at' => null,
+    ]);
+});
 
-        $this->assertDatabaseHas('rarities', [
-            'id' => $rarity->id,
-            'deleted_at' => null,
-        ]);
-    }
+test('index returns soft deleted with trashed param', function () {
+    Rarity::factory()->count(2)->create();
+    $deleted = Rarity::factory()->create();
+    $deleted->delete();
 
-    #[Test]
-    public function index_returns_soft_deleted_with_trashed_param()
-    {
-        Rarity::factory()->count(2)->create();
-        $deleted = Rarity::factory()->create();
-        $deleted->delete();
+    // Senza withTrashed: solo i 2 attivi
+    $this->getJson('/api/rarities')
+         ->assertStatus(200)
+         ->assertJsonCount(2);
 
-        // Senza withTrashed: solo i 2 attivi
-        $this->getJson('/api/rarities')
-             ->assertStatus(200)
-             ->assertJsonCount(2);
+    // Con withTrashed=true: tutti e 3
+    $this->getJson('/api/rarities?withTrashed=true')
+         ->assertStatus(200)
+         ->assertJsonCount(3);
+});
 
-        // Con withTrashed=true: tutti e 3
-        $this->getJson('/api/rarities?withTrashed=true')
-             ->assertStatus(200)
-             ->assertJsonCount(3);
-    }
+test('unauthenticated cannot create rarity', function () {
+    $response = $this->postJson('/api/rarities', ['name' => 'Rarity Non Autenticata']);
 
-    #[Test]
-    public function unauthenticated_cannot_create_rarity()
-    {
-        $response = $this->postJson('/api/rarities', ['name' => 'Rarity Non Autenticata']);
+    $response->assertStatus(401);
 
-        $response->assertStatus(401);
-
-        $this->assertDatabaseMissing('rarities', ['name' => 'Rarity Non Autenticata']);
-    }
-}
+    $this->assertDatabaseMissing('rarities', ['name' => 'Rarity Non Autenticata']);
+});
