@@ -14,12 +14,15 @@ class CardPrice extends Model
         'source',
         'price_type',
         'price',
+        'currency',
         'recorded_at',
+        'recorded_on',
     ];
 
     protected $casts = [
         'price'       => 'decimal:2',
         'recorded_at' => 'datetime',
+        'recorded_on' => 'date',
     ];
 
     public function card(): BelongsTo

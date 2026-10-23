@@ -61,6 +61,16 @@ php artisan sync:cards swsh1    # un solo set
 php artisan sync:cards --queue  # in coda
 ```
 
+Per ogni set la sync scarica il dettaglio di ogni carta (rarità, illustratore, prezzi) e i nomi in tutte le
+lingue con una chiamata per lingua sull'intero set: per un set da 200 carte sono circa 210 richieste.
+I prezzi Cardmarket (trend, avg, low, avg7, avg30 e varianti holo) sono salvati come snapshot giornaliero
+con la valuta: rilanciare la sync aggiorna il valore del giorno invece di duplicarlo.
+Le statistiche della dashboard usano l'ultimo prezzo trend di ogni carta.
+
+Con `TCGDEX_SCHEDULED_SYNC=true` lo scheduler sincronizza catalogo, set e carte ogni lunedì notte
+(spento di default: una sync completa sono decine di migliaia di richieste).
+Se TCGdex non risponde i job falliscono e la coda li ritenta.
+
 ---
 
 ## Test
@@ -89,7 +99,8 @@ blocca l'avvio se il database configurato non è `testing`: `RefreshDatabase` no
 | `CORS_ALLOWED_ORIGINS` | Origini ammesse dal CORS, separate da virgola |
 | `SANCTUM_EXPIRATION` | Durata dei token in minuti (default 7 giorni) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Utente admin creato dal seeder |
-| `DB_QUEUE_RETRY_AFTER` | Deve superare il timeout dei job (600 s): usare almeno 660 |
+| `DB_QUEUE_RETRY_AFTER` | Deve superare il timeout dei job (600 s): default 660 |
+| `TCGDEX_SCHEDULED_SYNC` | Sincronizzazione settimanale automatica con TCGdex (default false) |
 
 ---
 

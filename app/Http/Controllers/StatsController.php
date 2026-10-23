@@ -6,6 +6,7 @@ use App\Models\Card;
 use App\Models\Series;
 use App\Models\Set;
 use App\Models\User;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +22,9 @@ class StatsController extends Controller
 
         $cardsWithPrice = Card::whereHas('prices')->count();
 
-        $priceStats = DB::table('card_prices')
+        // Prezzi sull'ultimo trend Cardmarket di ogni carta, non sull'intero storico
+        // (che conterebbe ogni carta una volta per giorno e per tipo di prezzo)
+        $priceStats = DB::query()->fromSub($this->latestTrendPrices(), 'p')
             ->selectRaw('AVG(price) as avg_price, MAX(price) as max_price, SUM(price) as total_value')
             ->first();
 
@@ -66,16 +69,18 @@ class StatsController extends Controller
             ['label' => '€20 – €50','min' => 20,   'max' => 50],
             ['label' => '> €50',    'min' => 50,   'max' => PHP_INT_MAX],
         ])->map(function ($range) {
-            $query = DB::table('card_prices')->whereBetween('price', [$range['min'], $range['max']]);
-            if ($range['max'] === PHP_INT_MAX) {
-                $query = DB::table('card_prices')->where('price', '>', $range['min']);
-            }
-            return ['label' => $range['label'], 'value' => $query->count()];
+            // Intervalli semiaperti [min, max): un prezzo di confine sta in una sola fascia
+            $count = DB::query()->fromSub($this->latestTrendPrices(), 'p')
+                ->where('price', '>=', $range['min'])
+                ->when($range['max'] !== PHP_INT_MAX, fn ($q) => $q->where('price', '<', $range['max']))
+                ->count();
+
+            return ['label' => $range['label'], 'value' => $count];
         });
 
-        // --- Top 10 carte più costose ---
-        // Passo 1: prendi i top 10 con prezzo massimo (nessun JOIN traduzioni qui)
-        $topRows = DB::table('card_prices')
+        // --- Top 10 carte più costose (ultimo trend) ---
+        // Passo 1: prendi i top 10 per prezzo (nessun JOIN traduzioni qui)
+        $topRows = DB::query()->fromSub($this->latestTrendPrices(), 'card_prices')
             ->join('cards', 'card_prices.card_id', '=', 'cards.id')
             ->join('sets', 'cards.set_id', '=', 'sets.id')
             ->selectRaw('
@@ -147,5 +152,26 @@ class StatsController extends Controller
             ],
             'top_cards' => $topCards,
         ]);
+    }
+
+    /**
+     * Ultimo prezzo trend Cardmarket di ogni carta (card_id, price).
+     * Gli snapshot sono unici per giorno, quindi basta l'ultimo recorded_on.
+     */
+    private function latestTrendPrices(): Builder
+    {
+        $latestDay = DB::table('card_prices')
+            ->select('card_id', DB::raw('MAX(recorded_on) as recorded_on'))
+            ->where('source', 'cardmarket')
+            ->where('price_type', 'trend')
+            ->groupBy('card_id');
+
+        return DB::table('card_prices as cp')
+            ->joinSub($latestDay, 'latest', fn ($join) => $join
+                ->on('cp.card_id', '=', 'latest.card_id')
+                ->on('cp.recorded_on', '=', 'latest.recorded_on'))
+            ->where('cp.source', 'cardmarket')
+            ->where('cp.price_type', 'trend')
+            ->select('cp.card_id', 'cp.price');
     }
 }

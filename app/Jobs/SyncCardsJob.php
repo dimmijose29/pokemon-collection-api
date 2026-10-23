@@ -2,103 +2,114 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\TcgdexException;
 use App\Models\Artist;
 use App\Models\Card;
-use App\Models\CardPrice;
-use App\Models\CardTranslation;
 use App\Models\CardType;
 use App\Models\Language;
 use App\Models\Rarity;
 use App\Models\Set;
 use App\Services\TcgdexService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Sincronizza tutte le carte di un set da TCGdex.
  *
- * Dispatchato da SyncSetsJob o dal comando sync:cards.
- * Per ogni carta:
- *  - Upsert del record canonico (en) in cards
- *  - Upsert delle traduzioni in card_translations
- *  - Salvataggio dei prezzi Cardmarket in card_prices (storico)
+ * Dispatchato dal comando sync:cards (anche dalla schedulazione settimanale).
+ *  - Dettaglio di ogni carta (en): upsert in cards e snapshot giornaliero dei prezzi Cardmarket
+ *  - Nomi in tutte le lingue: una chiamata per lingua sull'intero set (inglese compreso),
+ *    perché /sets/{id} restituisce già il nome di ogni carta nella lingua richiesta
+ *
+ * Se TCGdex è irraggiungibile il job fallisce e la coda lo ritenta; un errore su una singola
+ * carta viene registrato e la sincronizzazione prosegue con le altre.
  */
-class SyncCardsJob implements ShouldQueue
+class SyncCardsJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 600;
     public int $tries   = 3;
 
+    /** Attesa tra i tentativi: TCGdex in difficoltà ha bisogno di tempo. */
+    public array $backoff = [60, 300];
+
+    /** Lo stesso set non viene messo in coda due volte finché il job non è finito. */
+    public int $uniqueFor = 3600;
+
+    /** Campi di pricing.cardmarket che non sono prezzi. */
+    private const PRICE_META_FIELDS = ['updated', 'unit', 'idProduct'];
+
     public function __construct(private string $setTcgdexId)
     {
     }
 
+    public function uniqueId(): string
+    {
+        return $this->setTcgdexId;
+    }
+
     public function handle(TcgdexService $tcgdex): void
     {
-        $set = Set::where('tcgdex_id', $this->setTcgdexId)->first();
+        // withTrashed: un set nascosto dall'admin resta nascosto ma le sue carte si aggiornano
+        $set = Set::withTrashed()->where('tcgdex_id', $this->setTcgdexId)->first();
 
         if (! $set) {
             Log::warning("SyncCardsJob: set {$this->setTcgdexId} non trovato nel DB");
             return;
         }
 
-        Log::info("SyncCardsJob: sincronizzazione carte per set {$this->setTcgdexId}");
+        $enSet = $tcgdex->withLang('en')->fetchSet($this->setTcgdexId);
+        $summaries = $enSet['cards'] ?? [];
 
-        // Fetch lista carte in inglese (canonico)
-        $cards = $tcgdex->withLang('en')->fetchCardsForSet($this->setTcgdexId);
-
-        if (empty($cards)) {
+        if (empty($summaries)) {
             Log::warning("SyncCardsJob: nessuna carta ricevuta per {$this->setTcgdexId}");
             return;
         }
 
-        $synced  = 0;
-        $firstCard = true;
+        $cardIds = [];   // tcgdex_id → id nel DB
+        $failed  = 0;
 
-        foreach ($cards as $cardSummary) {
-            $localId  = $cardSummary['localId'] ?? null;
-            $tcgdexId = $cardSummary['id'] ?? ($this->setTcgdexId . '-' . $localId);
+        foreach ($summaries as $summary) {
+            $tcgdexId = $summary['id'] ?? null;
 
-            if (! $localId) {
+            if (! $tcgdexId || empty($summary['localId'])) {
                 continue;
             }
 
             try {
-                // Dettaglio completo della carta
                 $detail = $tcgdex->withLang('en')->fetchCard($tcgdexId);
 
                 if (! $detail) {
                     continue;
                 }
 
-                // Log della struttura della prima carta per verifica field names
-                if ($firstCard) {
-                    Log::debug('SyncCardsJob sample card keys: ' . implode(', ', array_keys($detail)));
-                    Log::debug('SyncCardsJob sample pricing: ' . json_encode($detail['pricing'] ?? 'missing'));
-                    $firstCard = false;
-                }
-
-                $card = $this->upsertCard($set, $tcgdexId, $localId, $detail);
-
-                // Prezzi Cardmarket (se presenti)
-                $this->syncCardmarketPrice($card, $detail);
-
-                // Traduzioni
-                $this->syncTranslations($tcgdex, $card, $tcgdexId);
-
-                $synced++;
+                $card = $this->upsertCard($set, $tcgdexId, (string) $summary['localId'], $detail);
+                $this->syncCardmarketPrices($card, $detail);
+                $cardIds[$tcgdexId] = $card->id;
+            } catch (TcgdexException $e) {
+                // L'API non risponde: inutile continuare carta per carta, si ritenta il job
+                throw $e;
             } catch (\Throwable $e) {
+                $failed++;
                 Log::error("SyncCardsJob: errore carta {$tcgdexId} → {$e->getMessage()}");
             }
         }
 
-        Log::info("SyncCardsJob [{$this->setTcgdexId}]: sincronizzate {$synced} carte");
+        if ($cardIds === [] && $failed > 0) {
+            throw new \RuntimeException("SyncCardsJob [{$this->setTcgdexId}]: nessuna carta salvata, {$failed} errori");
+        }
+
+        $this->syncTranslations($tcgdex, $enSet, $cardIds);
+
+        Log::info("SyncCardsJob [{$this->setTcgdexId}]: sincronizzate " . count($cardIds) . " carte, {$failed} errori");
     }
 
     private function upsertCard(Set $set, string $tcgdexId, string $localId, array $detail): Card
@@ -108,7 +119,8 @@ class SyncCardsJob implements ShouldQueue
         $rarityId   = $this->resolveRarity($detail['rarity'] ?? null);
         $cardTypeId = $this->resolveCardType($detail['category'] ?? null);
 
-        return Card::updateOrCreate(
+        // withTrashed: aggiorna anche una carta nascosta invece di violare l'unique su tcgdex_id
+        return Card::withTrashed()->updateOrCreate(
             ['tcgdex_id' => $tcgdexId],
             [
                 'set_id'       => $set->id,
@@ -124,76 +136,94 @@ class SyncCardsJob implements ShouldQueue
     }
 
     /**
-     * Salva un record di prezzo Cardmarket (storico — non sovrascrive i precedenti).
-     * Path TCGdex: card.pricing.cardmarket.{trend|averageSellPrice|lowPrice}
+     * Snapshot giornaliero dei prezzi Cardmarket: un valore per tipo (trend, avg, low, avg7,
+     * trend-holo...) e per giorno di aggiornamento su Cardmarket. Rilanciare la sync lo
+     * aggiorna invece di duplicarlo. Path TCGdex: card.pricing.cardmarket.
      */
-    private function syncCardmarketPrice(Card $card, array $detail): void
+    private function syncCardmarketPrices(Card $card, array $detail): void
     {
         $pricing = $detail['pricing']['cardmarket'] ?? null;
 
-        if (! $pricing) {
+        if (! is_array($pricing)) {
             return;
         }
 
-        // Mappa campo API → price_type nel DB
-        $priceFields = [
-            'trend'            => 'trend',
-            'averageSellPrice' => 'avg',
-            'lowPrice'         => 'low',
-        ];
+        $updatedAt = isset($pricing['updated']) ? Carbon::parse($pricing['updated']) : now();
+        $currency  = strtoupper((string) ($pricing['unit'] ?? 'EUR'));
 
-        foreach ($priceFields as $apiField => $priceType) {
-            $value = $pricing[$apiField] ?? null;
-
-            if ($value === null) {
+        $rows = [];
+        foreach ($pricing as $type => $value) {
+            if (in_array($type, self::PRICE_META_FIELDS, true) || ! is_numeric($value)) {
                 continue;
             }
 
-            CardPrice::create([
+            $rows[] = [
                 'card_id'     => $card->id,
                 'source'      => 'cardmarket',
-                'price_type'  => $priceType,
+                'price_type'  => $type,
                 'price'       => $value,
-                'recorded_at' => now(),
-            ]);
+                'currency'    => $currency,
+                'recorded_at' => $updatedAt,
+                'recorded_on' => $updatedAt->toDateString(),
+            ];
+        }
+
+        if ($rows) {
+            DB::table('card_prices')->upsert(
+                $rows,
+                ['card_id', 'source', 'price_type', 'recorded_on'],
+                ['price', 'currency', 'recorded_at'],
+            );
         }
     }
 
-    private function syncTranslations(TcgdexService $tcgdex, Card $card, string $tcgdexId): void
+    /**
+     * Nomi delle carte in ogni lingua del DB supportata da TCGdex, inglese compreso.
+     *
+     * @param  array<string, int>  $cardIds  tcgdex_id → id nel DB
+     */
+    private function syncTranslations(TcgdexService $tcgdex, array $enSet, array $cardIds): void
     {
-        $languages = Language::whereNotNull('code')->get();
+        if ($cardIds === []) {
+            return;
+        }
 
-        foreach ($languages as $language) {
-            $lang = strtolower($language->code);
+        foreach (Language::whereNotNull('code')->get() as $language) {
+            $lang = TcgdexService::apiLang($language->code);
 
-            if ($lang === 'en') {
+            if (! $lang) {
                 continue;
             }
 
-            if (! in_array($lang, TcgdexService::SUPPORTED_LANGS)) {
-                continue;
-            }
+            // L'inglese è già stato scaricato; le altre lingue con una chiamata sul set intero.
+            // 404: il set non esiste in quella lingua (es. set solo giapponesi o solo occidentali).
+            $localized = $lang === 'en' ? $enSet : $tcgdex->withLang($lang)->fetchSet($this->setTcgdexId);
 
-            try {
-                $detail = $tcgdex->withLang($lang)->fetchCard($tcgdexId);
-                $name   = $detail['name'] ?? null;
+            $rows = [];
+            foreach ($localized['cards'] ?? [] as $summary) {
+                $cardId = $cardIds[$summary['id'] ?? ''] ?? null;
 
-                if (! $name) {
-                    continue;
+                if ($cardId && ! empty($summary['name'])) {
+                    $rows[] = [
+                        'card_id'     => $cardId,
+                        'language_id' => $language->id,
+                        'name'        => $summary['name'],
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ];
                 }
+            }
 
-                DB::table('card_translations')->updateOrInsert(
-                    ['card_id' => $card->id, 'language_id' => $language->id],
-                    ['name' => $name, 'updated_at' => now(), 'created_at' => now()]
-                );
-            } catch (\Throwable $e) {
-                Log::warning("SyncCardsJob [{$lang}]: errore traduzione {$tcgdexId} → {$e->getMessage()}");
+            if ($rows) {
+                DB::table('card_translations')->upsert($rows, ['card_id', 'language_id'], ['name', 'updated_at']);
             }
         }
     }
 
     /**
      * Trova o crea un artista per nome. Ritorna null se il nome non è valorizzato.
+     * Un artista nascosto dall'admin viene riusato (senza ripristinarlo) invece di
+     * provare a ricrearlo, cosa che violerebbe l'unique sul nome.
      */
     private function resolveArtist(?string $name): ?int
     {
@@ -201,7 +231,7 @@ class SyncCardsJob implements ShouldQueue
             return null;
         }
 
-        return Artist::firstOrCreate(['name' => $name])->id;
+        return Artist::withTrashed()->firstOrCreate(['name' => $name])->id;
     }
 
     /**
@@ -214,7 +244,7 @@ class SyncCardsJob implements ShouldQueue
             return null;
         }
 
-        $id = Rarity::whereRaw('LOWER(name) = ?', [strtolower($name)])->value('id');
+        $id = Rarity::withTrashed()->whereRaw('LOWER(name) = ?', [strtolower($name)])->value('id');
 
         if (! $id) {
             Log::debug("SyncCardsJob: rarità non trovata → \"{$name}\"");
@@ -234,12 +264,14 @@ class SyncCardsJob implements ShouldQueue
         }
 
         // Match diretto
-        $id = CardType::whereRaw('LOWER(name) = ?', [strtolower($category)])->value('id');
+        $id = CardType::withTrashed()->whereRaw('LOWER(name) = ?', [strtolower($category)])->value('id');
 
         // Fallback: rimuovi caratteri non ASCII (es. "Pokémon" → "Pokemon")
         if (! $id) {
             $normalized = preg_replace('/[^a-zA-Z0-9 ]/', '', $category);
-            $id = CardType::whereRaw('LOWER(REGEXP_REPLACE(name, "[^a-zA-Z0-9 ]", "")) = ?', [strtolower($normalized)])->value('id');
+            $id = CardType::withTrashed()
+                ->whereRaw("LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9 ]', '')) = ?", [strtolower($normalized)])
+                ->value('id');
         }
 
         if (! $id) {

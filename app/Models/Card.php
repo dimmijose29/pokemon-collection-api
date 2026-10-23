@@ -66,7 +66,8 @@ class Card extends Model
     {
         return $this->hasOne(CardPrice::class)
             ->ofMany(
-                ['recorded_at' => 'max'],
+                // un solo snapshot al giorno: a parità di giorno decide l'id
+                ['recorded_on' => 'max', 'id' => 'max'],
                 fn($q) => $q->where('source', 'cardmarket')->where('price_type', 'trend')
             );
     }
@@ -79,7 +80,8 @@ class Card extends Model
         return $this->prices()
             ->where('source', $source)
             ->where('price_type', $priceType)
-            ->latest('recorded_at')
+            ->latest('recorded_on')
+            ->latest('id')
             ->first();
     }
 }

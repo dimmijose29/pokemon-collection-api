@@ -2,6 +2,16 @@
 
 return [
 
+    // Catalogo carte (vedi App\Services\TcgdexService)
+    'tcgdex' => [
+        'url'             => env('TCGDEX_URL', 'https://api.tcgdex.net/v2'),
+        'timeout'         => (int) env('TCGDEX_TIMEOUT', 30),
+        'connect_timeout' => (int) env('TCGDEX_CONNECT_TIMEOUT', 10),
+        'retries'         => (int) env('TCGDEX_RETRIES', 3),
+        // Sincronizzazione settimanale automatica (set e carte con i prezzi): off di default
+        'scheduled_sync'  => (bool) env('TCGDEX_SCHEDULED_SYNC', false),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

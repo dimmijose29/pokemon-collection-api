@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\TcgdexException;
 use App\Models\Language;
 use App\Models\Series;
 use App\Models\Set;
@@ -64,13 +65,14 @@ class SyncSetsJob implements ShouldQueue
                     $serieLogoUrl = $detail['serie']['logo'] ?? $setData['serie']['logo'] ?? null;
 
                     if ($serieTcgId) {
-                        $seriesModel = Series::updateOrCreate(
+                        // withTrashed: una serie nascosta dall'admin si aggiorna invece di violare l'unique
+                        $seriesModel = Series::withTrashed()->updateOrCreate(
                             ['tcgdex_id' => $serieTcgId],
                             ['name' => $serieName, 'logo_url' => $serieLogoUrl]
                         );
                     } else {
                         // Fallback: usa il nome come chiave univoca per evitare duplicati
-                        $seriesModel = Series::firstOrCreate(
+                        $seriesModel = Series::withTrashed()->firstOrCreate(
                             ['name' => $serieName, 'tcgdex_id' => null],
                             ['logo_url' => $serieLogoUrl]
                         );
@@ -81,7 +83,7 @@ class SyncSetsJob implements ShouldQueue
                     }
                 }
 
-                Set::updateOrCreate(
+                Set::withTrashed()->updateOrCreate(
                     ['tcgdex_id' => $tcgdexId],
                     [
                         'name'                => $setData['name'] ?? $tcgdexId,
@@ -95,6 +97,8 @@ class SyncSetsJob implements ShouldQueue
                 );
 
                 $synced++;
+            } catch (TcgdexException $e) {
+                throw $e;
             } catch (\Throwable $e) {
                 Log::error("SyncSetsJob: errore su set {$tcgdexId} → {$e->getMessage()}");
             }
@@ -106,15 +110,11 @@ class SyncSetsJob implements ShouldQueue
         $languages = Language::whereNotNull('code')->get();
 
         foreach ($languages as $language) {
-            $lang = strtolower($language->code);
+            // Codice di TCGdex (es. zh-CN → zh-cn); null se la lingua non è supportata
+            $lang = TcgdexService::apiLang($language->code);
 
-            // Salta l'inglese (già nella tabella principale)
-            if ($lang === 'en') {
-                continue;
-            }
-
-            // Salta lingue non supportate da TCGdex
-            if (! in_array($lang, TcgdexService::SUPPORTED_LANGS)) {
+            // Salta l'inglese (già nella tabella principale) e le lingue non supportate
+            if (! $lang || $lang === 'en') {
                 continue;
             }
 
@@ -143,7 +143,7 @@ class SyncSetsJob implements ShouldQueue
                 continue;
             }
 
-            $set = Set::where('tcgdex_id', $tcgdexId)->first();
+            $set = Set::withTrashed()->where('tcgdex_id', $tcgdexId)->first();
 
             if (! $set) {
                 continue;

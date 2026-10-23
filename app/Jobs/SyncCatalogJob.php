@@ -20,7 +20,8 @@ use Illuminate\Support\Facades\Log;
  *  - Artisti      → tabella artists
  *
  * Va eseguito PRIMA di SyncCardsJob in modo che le FK siano già risolte.
- * Idempotente: usa updateOrCreate/firstOrCreate su ogni record.
+ * Idempotente: usa firstOrCreate su ogni record, compresi quelli nascosti dall'admin
+ * (che restano nascosti: ricrearli violerebbe l'unique sul nome).
  */
 class SyncCatalogJob implements ShouldQueue
 {
@@ -61,7 +62,7 @@ class SyncCatalogJob implements ShouldQueue
             }
 
             // firstOrCreate per non sovrascrivere eventuali rarità inserite manualmente
-            Rarity::firstOrCreate(['name' => trim($name)]);
+            Rarity::withTrashed()->firstOrCreate(['name' => trim($name)]);
             $synced++;
         }
 
@@ -88,7 +89,7 @@ class SyncCatalogJob implements ShouldQueue
                 continue;
             }
 
-            CardType::firstOrCreate(['name' => trim($name)]);
+            CardType::withTrashed()->firstOrCreate(['name' => trim($name)]);
             $synced++;
         }
 
@@ -115,7 +116,7 @@ class SyncCatalogJob implements ShouldQueue
                 continue;
             }
 
-            Artist::firstOrCreate(['name' => trim($name)]);
+            Artist::withTrashed()->firstOrCreate(['name' => trim($name)]);
             $synced++;
         }
 
