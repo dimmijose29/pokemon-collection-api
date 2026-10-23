@@ -2,58 +2,13 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-
-class GradingCompanyRequest extends FormRequest
+class GradingCompanyRequest extends CatalogRequest
 {
-    public function authorize(): bool
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        // GET pubblici
-        if ($this->method() === 'GET') {
-            return true;
-        }
-
-        // POST → create (solo admin)
-        if ($this->method() === 'POST') {
-            return $user->can('create', \App\Models\GradingCompany::class);
-        }
-
-        // PUT/PATCH/DELETE → update/delete (solo admin)
-        $gradingCompany = $this->route('gradingCompany');
-
-        if (! $gradingCompany) {
-            return false;
-        }
-
-        $ability = $this->method() === 'DELETE' ? 'delete' : 'update';
-
-        return $user->can($ability, $gradingCompany);
-    }
-
     public function rules(): array
     {
-        $rules = [
-            'name' => [
-                'required',
-                'string',
-                'max:50',
-            ],
+        return [
+            'name' => ['required', 'string', 'max:50', $this->unique('grading_companies', 'name')],
         ];
-
-        if ($this->method() === 'PUT' || $this->method() === 'PATCH') {
-            $rules['name'][] = Rule::unique('grading_companies', 'name')->ignore($this->route('gradingCompany'));
-        } else {
-            $rules['name'][] = Rule::unique('grading_companies', 'name');
-        }
-
-        return $rules;
     }
 
     public function messages(): array

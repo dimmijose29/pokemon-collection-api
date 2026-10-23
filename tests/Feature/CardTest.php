@@ -48,6 +48,16 @@ class CardTest extends TestCase
     }
 
     /** @test */
+    public function paginated_index_caps_per_page()
+    {
+        Card::factory()->count(3)->create(['set_id' => $this->set->id]);
+
+        $this->getJson('/api/cards?page=1&per_page=100000')
+             ->assertStatus(200)
+             ->assertJsonPath('meta.per_page', 100);
+    }
+
+    /** @test */
     public function anyone_can_view_single_card()
     {
         $card = Card::factory()->create([

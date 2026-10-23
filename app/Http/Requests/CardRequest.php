@@ -2,49 +2,19 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class CardRequest extends FormRequest
+class CardRequest extends CatalogRequest
 {
-    public function authorize(): bool
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($this->method() === 'GET') {
-            return true;
-        }
-
-        if ($this->method() === 'POST') {
-            return $user->can('create', \App\Models\Card::class);
-        }
-
-        $card = $this->route('card');
-
-        if (! $card) {
-            return false;
-        }
-
-        $ability = $this->method() === 'DELETE' ? 'delete' : 'update';
-
-        return $user->can($ability, $card);
-    }
-
     public function rules(): array
     {
-        $cardId = $this->route('card')?->id;
-
         return [
             // Obbligatorio in creazione: la colonna è NOT NULL e identifica il record per la sync
             'tcgdex_id'    => [
-                $this->isMethod('POST') ? 'required' : 'sometimes',
+                $this->isCreate() ? 'required' : 'sometimes',
                 'string',
                 'max:100',
-                Rule::unique('cards', 'tcgdex_id')->ignore($cardId),
+                Rule::unique('cards', 'tcgdex_id')->ignore($this->recordId()),
             ],
             'set_id'       => ['required', 'exists:sets,id'],
             'artist_id'    => ['nullable', 'exists:artists,id'],

@@ -2,88 +2,17 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use App\Models\Language;
-
-class LanguageRequest extends FormRequest
+class LanguageRequest extends CatalogRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        $user = $this->user();
-
-        if (!$user) return false; // non autenticato
-
-        // Per GET (index/show) → chiama policy viewAny/view
-        if ($this->method() === 'GET') {
-            if ($this->route('language')) return $user->can('view', $this->route('language'));
-            return $user->can('viewAny', Language::class);
-        }
-
-        // Per POST (create) → chiama policy create
-        if ($this->method() === 'POST') {
-            return $user->can('create', Language::class);
-        }
-
-        // Per PUT/PATCH (update) → chiama policy update
-        if ($this->method() === 'PUT' || $this->method() === 'PATCH') {
-            if (!$this->route('language')) return false;
-            return $user->can('update', $this->route('language'));
-        }
-
-        // Per DELETE → chiama policy delete
-        if ($this->method() === 'DELETE') {
-            if (!$this->route('language')) return false;
-            return $user->can('delete', $this->route('language'));
-        }
-
-        // Default
-        return false;
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
-        $rules = [
-            'code' => [
-                'required',
-                'string',
-                'max:10',
-            ],
-            'name' => [
-                'required',
-                'string',
-                'max:50',
-            ],
-            'country_code' => [
-                'required',
-                'string',
-                'max:10',
-            ],
+        return [
+            'code' => ['required', 'string', 'max:10', $this->unique('languages', 'code')],
+            'name' => ['required', 'string', 'max:50', $this->unique('languages', 'name')],
+            'country_code' => ['required', 'string', 'max:10', $this->unique('languages', 'country_code')],
         ];
-
-        if ($this->method() === 'PUT' || $this->method() === 'PATCH') {
-            $rules['code'][] = Rule::unique('languages', 'code')->ignore($this->route('language'));
-            $rules['name'][] = Rule::unique('languages', 'name')->ignore($this->route('language'));
-            $rules['country_code'][] = Rule::unique('languages', 'country_code')->ignore($this->route('language'));
-        } else {
-            // CREATE: unique semplice
-            $rules['code'][] = Rule::unique('languages', 'code');
-            $rules['name'][] = Rule::unique('languages', 'name');
-            $rules['country_code'][] = Rule::unique('languages', 'country_code');
-        }
-
-        return $rules;
     }
 
-    /**
-     * Messaggi di errore personalizzati in italiano
-     */
     public function messages(): array
     {
         return [

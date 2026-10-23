@@ -2,70 +2,39 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Set;
 use App\Http\Requests\SetRequest;
 use App\Http\Resources\SetResource;
+use App\Models\Set;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
-class SetController extends Controller
+class SetController extends CatalogController
 {
+    protected string $model = Set::class;
+    protected string $resource = SetResource::class;
+    protected string $request = SetRequest::class;
+
+    protected array $with = ['series'];
+
+    protected string $deletedMessage = 'Set eliminato con successo';
+
     /**
-     * Lista set con supporto withTrashed e filtro serie.
+     * Lista dal più recente, con filtro opzionale per serie.
      */
-    public function index(Request $request)
+    protected function indexQuery(Request $request): Builder
     {
         $query = Set::with('series')->orderBy('release_date', 'desc')->orderBy('name');
-
-        if ($request->boolean('withTrashed')) {
-            $query->withTrashed();
-        }
 
         if ($request->filled('series_id')) {
             $query->where('series_id', $request->integer('series_id'));
         }
 
-        return response()->json(SetResource::collection($query->get()));
+        return $query;
     }
 
-    /**
-     * Dettaglio set con traduzioni e serie caricate.
-     */
-    public function show(Set $set)
+    /** Il dettaglio include anche le traduzioni. */
+    protected function showRelations(): array
     {
-        $set->load(['translations.language', 'series']);
-
-        return response()->json(new SetResource($set));
-    }
-
-    public function store(SetRequest $request)
-    {
-        $set = Set::create($request->validated());
-        $set->load('series');
-
-        return response()->json(new SetResource($set), 201);
-    }
-
-    public function update(SetRequest $request, Set $set)
-    {
-        $set->update($request->validated());
-        $set->load('series');
-
-        return response()->json(new SetResource($set));
-    }
-
-    public function destroy(Set $set)
-    {
-        $set->delete();
-
-        return response()->json(['message' => 'Set eliminato con successo']);
-    }
-
-    public function restore($set)
-    {
-        $set = Set::withTrashed()->findOrFail($set);
-        $set->restore();
-        $set->load('series');
-
-        return response()->json(new SetResource($set));
+        return ['translations.language', 'series'];
     }
 }

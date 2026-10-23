@@ -2,49 +2,19 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class SetRequest extends FormRequest
+class SetRequest extends CatalogRequest
 {
-    public function authorize(): bool
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($this->method() === 'GET') {
-            return true;
-        }
-
-        if ($this->method() === 'POST') {
-            return $user->can('create', \App\Models\Set::class);
-        }
-
-        $set = $this->route('set');
-
-        if (! $set) {
-            return false;
-        }
-
-        $ability = $this->method() === 'DELETE' ? 'delete' : 'update';
-
-        return $user->can($ability, $set);
-    }
-
     public function rules(): array
     {
-        $setId = $this->route('set')?->id;
-
         return [
             // Obbligatorio in creazione: la colonna è NOT NULL e identifica il record per la sync
             'tcgdex_id'           => [
-                $this->isMethod('POST') ? 'required' : 'sometimes',
+                $this->isCreate() ? 'required' : 'sometimes',
                 'string',
                 'max:50',
-                Rule::unique('sets', 'tcgdex_id')->ignore($setId),
+                Rule::unique('sets', 'tcgdex_id')->ignore($this->recordId()),
             ],
             'name'                => ['required', 'string', 'max:100'],
             'series_id'           => ['nullable', 'integer', 'exists:series,id'],

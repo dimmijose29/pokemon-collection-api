@@ -2,19 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Card;
 use App\Http\Requests\CardRequest;
 use App\Http\Resources\CardResource;
+use App\Models\Card;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class CardController extends Controller
+class CardController extends CatalogController
 {
+    protected string $model = Card::class;
+    protected string $resource = CardResource::class;
+    protected string $request = CardRequest::class;
+
+    protected array $with = ['set.series', 'artist', 'rarity', 'cardType', 'translations.language', 'latestCardmarketPrice'];
+
+    protected string $deletedMessage = 'Carta eliminata con successo';
+
     /**
      * Lista carte con supporto withTrashed, filtri multipli e paginazione opzionale.
      * Quando viene passato il parametro `page`, la risposta è paginata (meta incluso).
      * Senza `page` si restituisce l'array completo (compatibilità con SetCardsTable).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Card::with(['set.series', 'rarity', 'artist', 'cardType', 'translations', 'latestCardmarketPrice'])
             ->orderBy('set_id')
@@ -65,7 +74,8 @@ class CardController extends Controller
 
         // --- Paginazione (solo se `page` è presente) ---
         if ($request->filled('page')) {
-            $perPage = $request->integer('per_page', 48);
+            // Limite superiore: senza, per_page arbitrario permette di scaricare tutto in una richiesta
+            $perPage = min(max($request->integer('per_page', 48), 1), 100);
             $paginated = $query->paginate($perPage);
 
             return response()->json([
@@ -80,44 +90,5 @@ class CardController extends Controller
         }
 
         return response()->json(CardResource::collection($query->get()));
-    }
-
-    /**
-     * Dettaglio carta con tutte le relazioni e traduzioni.
-     */
-    public function show(Card $card)
-    {
-        $card->load(['set.series', 'artist', 'rarity', 'cardType', 'translations.language', 'latestCardmarketPrice']);
-
-        return response()->json(new CardResource($card));
-    }
-
-    public function store(CardRequest $request)
-    {
-        $card = Card::create($request->validated());
-
-        return response()->json(new CardResource($card), 201);
-    }
-
-    public function update(CardRequest $request, Card $card)
-    {
-        $card->update($request->validated());
-
-        return response()->json(new CardResource($card));
-    }
-
-    public function destroy(Card $card)
-    {
-        $card->delete();
-
-        return response()->json(['message' => 'Carta eliminata con successo']);
-    }
-
-    public function restore($card)
-    {
-        $card = Card::withTrashed()->findOrFail($card);
-        $card->restore();
-
-        return response()->json(new CardResource($card));
     }
 }
