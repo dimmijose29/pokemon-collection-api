@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Providers\AppServiceProvider;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
-use PragmaRX\Google2FALaravel\Google2FA;
+use PragmaRX\Google2FA\Google2FA;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;

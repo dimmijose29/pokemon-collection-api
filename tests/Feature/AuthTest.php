@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use PragmaRX\Google2FALaravel\Google2FA;
+use PragmaRX\Google2FA\Google2FA;
 
 class AuthTest extends TestCase
 {
@@ -24,7 +25,7 @@ class AuthTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_register()
     {
         $response = $this->postJson('/api/auth/register', [
@@ -49,7 +50,7 @@ class AuthTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_login_with_email_or_username()
     {
         // Login con email
@@ -69,7 +70,7 @@ class AuthTest extends TestCase
 
     // 2FA
 
-    /** @test */
+    #[Test]
     public function user_can_enable_two_factor()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -94,7 +95,7 @@ class AuthTest extends TestCase
         $this->assertSame($response->json('secret'), $this->user->fresh()->totp_secret);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_confirm_two_factor_with_valid_code()
     {
         // Abilita 2FA
@@ -124,7 +125,7 @@ class AuthTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function user_cannot_confirm_with_invalid_code()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -140,7 +141,7 @@ class AuthTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_disable_two_factor()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -174,7 +175,7 @@ class AuthTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function login_requires_two_factor_code_when_enabled()
     {
         // 1. Abilita e conferma 2FA
@@ -183,7 +184,7 @@ class AuthTest extends TestCase
         $enable = $this->postJson('/api/auth/2fa/enable');
         $secret = $enable->json('secret');
 
-        $google2fa = app(\PragmaRX\Google2FALaravel\Google2FA::class);
+        $google2fa = app(\PragmaRX\Google2FA\Google2FA::class);
         $validCode = $google2fa->getCurrentOtp($secret);
 
         $this->postJson('/api/auth/2fa/confirm', ['code' => $validCode])
@@ -206,7 +207,7 @@ class AuthTest extends TestCase
                 ->assertJsonMissing(['token']); // NON deve dare token definitivo
     }
 
-    /** @test */
+    #[Test]
     public function user_can_cancel_two_factor_setup()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -234,7 +235,7 @@ class AuthTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function cancel_two_factor_setup_fails_if_already_confirmed()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -255,7 +256,7 @@ class AuthTest extends TestCase
                  ->assertJson(['message' => 'Usa la disattivazione per rimuovere la 2FA attiva']);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_logout()
     {
         // Login
@@ -312,7 +313,7 @@ class AuthTest extends TestCase
         ])->assertStatus(200)->json('temp_token');
     }
 
-    /** @test */
+    #[Test]
     public function two_factor_temp_token_cannot_access_protected_routes()
     {
         $this->user->update(['is_admin' => true]);
@@ -324,7 +325,7 @@ class AuthTest extends TestCase
         $this->withToken($tempToken)->getJson('/api/users')->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_complete_login_with_two_factor_code()
     {
         $secret = $this->enableTwoFactor();
@@ -342,7 +343,7 @@ class AuthTest extends TestCase
         $this->assertDatabaseMissing('personal_access_tokens', ['name' => '2fa_challenge']);
     }
 
-    /** @test */
+    #[Test]
     public function two_factor_code_cannot_be_reused()
     {
         $secret = $this->enableTwoFactor();
@@ -355,7 +356,7 @@ class AuthTest extends TestCase
             ->assertStatus(422);
     }
 
-    /** @test */
+    #[Test]
     public function verify_two_factor_rejects_full_and_expired_tokens()
     {
         $secret = $this->enableTwoFactor();
@@ -373,7 +374,7 @@ class AuthTest extends TestCase
             ->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function two_factor_verify_is_rate_limited_per_temp_token()
     {
         $this->enableTwoFactor();
@@ -388,7 +389,7 @@ class AuthTest extends TestCase
             ->assertStatus(429);
     }
 
-    /** @test */
+    #[Test]
     public function totp_secret_is_encrypted_at_rest()
     {
         $secret = $this->enableTwoFactor();
@@ -399,7 +400,7 @@ class AuthTest extends TestCase
         $this->assertSame($secret, $this->user->fresh()->totp_secret);
     }
 
-    /** @test */
+    #[Test]
     public function disabling_two_factor_requires_password()
     {
         $secret = $this->enableTwoFactor();
@@ -413,7 +414,7 @@ class AuthTest extends TestCase
         $this->assertTrue($this->user->fresh()->is_2fa_enabled);
     }
 
-    /** @test */
+    #[Test]
     public function login_gives_same_error_for_unknown_user_and_wrong_password()
     {
         $unknown = $this->postJson('/api/auth/login', ['login' => 'nessuno@example.com', 'password' => 'password123']);
@@ -424,7 +425,7 @@ class AuthTest extends TestCase
         $this->assertSame($unknown->json(), $wrong->json());
     }
 
-    /** @test */
+    #[Test]
     public function login_is_rate_limited()
     {
         for ($i = 0; $i < 5; $i++) {
@@ -436,7 +437,7 @@ class AuthTest extends TestCase
             ->assertStatus(429);
     }
 
-    /** @test */
+    #[Test]
     public function inactive_user_cannot_login_and_loses_existing_tokens()
     {
         $token = $this->user->createToken('auth_token')->plainTextToken;
@@ -449,7 +450,7 @@ class AuthTest extends TestCase
         $this->withToken($token)->getJson('/api/auth/me')->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function tokens_expire()
     {
         $token = $this->user->createToken('auth_token')->plainTextToken;
@@ -461,7 +462,7 @@ class AuthTest extends TestCase
 
     // Password
 
-    /** @test */
+    #[Test]
     public function user_can_change_own_password_with_current_password()
     {
         $current = $this->user->createToken('auth_token')->plainTextToken;
@@ -482,7 +483,7 @@ class AuthTest extends TestCase
         $this->withToken($other)->getJson('/api/auth/me')->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function changing_password_requires_correct_current_password()
     {
         $this->actingAs($this->user, 'sanctum');
@@ -496,7 +497,7 @@ class AuthTest extends TestCase
         $this->assertTrue(\Hash::check('password123', $this->user->fresh()->password));
     }
 
-    /** @test */
+    #[Test]
     public function user_cannot_change_another_users_password()
     {
         $victim = User::factory()->create(['password' => bcrypt('victimPassword1')]);
@@ -511,7 +512,7 @@ class AuthTest extends TestCase
         $this->assertTrue(\Hash::check('victimPassword1', $victim->fresh()->password));
     }
 
-    /** @test */
+    #[Test]
     public function forgot_password_sends_reset_link_without_changing_password()
     {
         \Notification::fake();
@@ -522,7 +523,7 @@ class AuthTest extends TestCase
         $this->assertTrue(\Hash::check('password123', $this->user->fresh()->password));
     }
 
-    /** @test */
+    #[Test]
     public function forgot_password_does_not_reveal_unknown_emails()
     {
         \Notification::fake();
@@ -535,7 +536,7 @@ class AuthTest extends TestCase
         $this->assertSame($known->json(), $unknown->json());
     }
 
-    /** @test */
+    #[Test]
     public function user_can_reset_password_with_valid_token()
     {
         $oldToken = $this->user->createToken('auth_token')->plainTextToken;
@@ -553,7 +554,7 @@ class AuthTest extends TestCase
         $this->withToken($oldToken)->getJson('/api/auth/me')->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function reset_password_rejects_invalid_token()
     {
         $this->postJson('/api/auth/reset-password', [

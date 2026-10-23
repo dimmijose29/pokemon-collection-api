@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Series;
 use App\Models\Set;
 use App\Models\User;
@@ -23,7 +24,7 @@ class SetTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_sets_list()
     {
         Set::factory()->count(3)->create();
@@ -33,7 +34,7 @@ class SetTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_set()
     {
         $set = Set::factory()->create(['name' => 'Sword & Shield']);
@@ -43,7 +44,7 @@ class SetTest extends TestCase
              ->assertJsonPath('name', 'Sword & Shield');
     }
 
-    /** @test */
+    #[Test]
     public function index_supports_series_filter()
     {
         $swordShield = Series::factory()->create(['name' => 'Sword & Shield']);
@@ -56,7 +57,7 @@ class SetTest extends TestCase
              ->assertJsonCount(2);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_set()
     {
         $payload = [
@@ -76,7 +77,7 @@ class SetTest extends TestCase
         $this->assertDatabaseHas('sets', ['tcgdex_id' => 'test1']);
     }
 
-    /** @test */
+    #[Test]
     public function creating_set_requires_tcgdex_id()
     {
         $this->actingAs($this->admin)
@@ -85,7 +86,7 @@ class SetTest extends TestCase
              ->assertJsonValidationErrors('tcgdex_id');
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_set()
     {
         $this->actingAs($this->user)
@@ -95,14 +96,14 @@ class SetTest extends TestCase
         $this->assertDatabaseMissing('sets', ['tcgdex_id' => 'blk1']);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_set()
     {
         $this->postJson('/api/sets', ['name' => 'Unauth Set', 'tcgdex_id' => 'unauth1'])
              ->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function tcgdex_id_must_be_unique_on_create()
     {
         Set::factory()->create(['tcgdex_id' => 'swsh1']);
@@ -113,7 +114,7 @@ class SetTest extends TestCase
              ->assertJsonValidationErrors('tcgdex_id');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_set()
     {
         $set = Set::factory()->create(['name' => 'Old Name']);
@@ -126,7 +127,7 @@ class SetTest extends TestCase
         $this->assertDatabaseHas('sets', ['id' => $set->id, 'name' => 'New Name']);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_set()
     {
         $set = Set::factory()->create();
@@ -136,7 +137,7 @@ class SetTest extends TestCase
              ->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_set()
     {
         $set = Set::factory()->create();
@@ -148,7 +149,7 @@ class SetTest extends TestCase
         $this->assertSoftDeleted('sets', ['id' => $set->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_set()
     {
         $set = Set::factory()->create();
@@ -160,7 +161,7 @@ class SetTest extends TestCase
         $this->assertDatabaseHas('sets', ['id' => $set->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_set()
     {
         $set = Set::factory()->create();
@@ -174,7 +175,7 @@ class SetTest extends TestCase
         $this->assertDatabaseHas('sets', ['id' => $set->id, 'deleted_at' => null]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Set::factory()->count(2)->create();
@@ -184,7 +185,7 @@ class SetTest extends TestCase
         $this->getJson('/api/sets?withTrashed=true')->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function show_includes_translations_when_present()
     {
         $set = Set::factory()->create();
@@ -196,7 +197,7 @@ class SetTest extends TestCase
                  ->assertJsonStructure(['id', 'name', 'translations']);
     }
 
-    /** @test */
+    #[Test]
     public function image_urls_have_extension_appended()
     {
         $set = Set::factory()->create([

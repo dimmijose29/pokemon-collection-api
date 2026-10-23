@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Series;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,7 +23,7 @@ class SeriesTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_series_list()
     {
         Series::factory()->count(3)->create();
@@ -30,7 +31,7 @@ class SeriesTest extends TestCase
         $this->getJson('/api/series')->assertStatus(200);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_series()
     {
         $this->actingAs($this->admin)
@@ -41,7 +42,7 @@ class SeriesTest extends TestCase
         $this->assertDatabaseHas('series', ['tcgdex_id' => 'swsh']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_series()
     {
         $series = Series::factory()->create(['name' => 'Vecchio nome']);
@@ -52,7 +53,7 @@ class SeriesTest extends TestCase
              ->assertJsonPath('name', 'Nuovo nome');
     }
 
-    /** @test */
+    #[Test]
     public function series_name_is_required()
     {
         $this->actingAs($this->admin)
@@ -61,7 +62,7 @@ class SeriesTest extends TestCase
              ->assertJsonValidationErrors('name');
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_series()
     {
         $this->actingAs($this->user)
@@ -69,7 +70,7 @@ class SeriesTest extends TestCase
              ->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_and_restore_series()
     {
         $series = Series::factory()->create();

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,7 +24,7 @@ class UserTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_view_users_list()
     {
         User::factory()->count(3)->create();
@@ -36,7 +37,7 @@ class UserTest extends TestCase
                  ->assertJsonCount(5);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_view_users_list()
     {
         $response = $this->actingAs($this->user)
@@ -45,7 +46,7 @@ class UserTest extends TestCase
         $response->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_view_users_list()
     {
         $response = $this->getJson('/api/users');
@@ -53,7 +54,7 @@ class UserTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_view_single_user()
     {
         $target = User::factory()->create(['username' => 'testuser']);
@@ -65,7 +66,7 @@ class UserTest extends TestCase
                  ->assertJsonPath('username', 'testuser');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_user()
     {
         $payload = [
@@ -85,7 +86,7 @@ class UserTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'nuovo@utente.it']);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_user()
     {
         $response = $this->actingAs($this->user)
@@ -99,7 +100,7 @@ class UserTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'nuovo@utente.it']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_toggle_is_admin()
     {
         $target = User::factory()->create(['is_admin' => false]);
@@ -118,7 +119,7 @@ class UserTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_another_user()
     {
         $target = User::factory()->create(['username' => 'original']);
@@ -133,7 +134,7 @@ class UserTest extends TestCase
         $this->assertDatabaseHas('users', ['username' => 'original']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_upload_avatar()
     {
         Storage::fake('avatars');
@@ -150,7 +151,7 @@ class UserTest extends TestCase
         Storage::disk('avatars')->assertExists($file->hashName());
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_user()
     {
         $target = User::factory()->create();
@@ -163,7 +164,7 @@ class UserTest extends TestCase
         $this->assertSoftDeleted('users', ['id' => $target->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_cannot_delete_themselves()
     {
         $response = $this->actingAs($this->admin)
@@ -177,7 +178,7 @@ class UserTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_user()
     {
         $target = User::factory()->create();
@@ -190,7 +191,7 @@ class UserTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $target->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_deleted_user()
     {
         $target = User::factory()->create();
@@ -208,7 +209,7 @@ class UserTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         $active  = User::factory()->count(2)->create();
@@ -228,7 +229,7 @@ class UserTest extends TestCase
              ->assertJsonCount(5);
     }
 
-    /** @test */
+    #[Test]
     public function username_must_be_unique_on_update()
     {
         $other = User::factory()->create(['username' => 'taken_username']);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Currency;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class CurrencyTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_currencies_list()
     {
         Currency::factory()->count(2)->create();
@@ -34,7 +35,7 @@ class CurrencyTest extends TestCase
                  ->assertJsonCount(2);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_currency()
     {
         $currency = Currency::factory()->create([
@@ -52,7 +53,7 @@ class CurrencyTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_currency()
     {
         $payload = [
@@ -71,7 +72,7 @@ class CurrencyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_currency()
     {
         $payload = [
@@ -87,7 +88,7 @@ class CurrencyTest extends TestCase
         $this->assertDatabaseMissing('currencies', ['symbol' => '€']);
     }
 
-    /** @test */
+    #[Test]
     public function code_must_be_unique_on_create()
     {
         Currency::factory()->create(['symbol' => '€']);
@@ -102,7 +103,7 @@ class CurrencyTest extends TestCase
                  ->assertJsonValidationErrors('symbol');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_currency()
     {
         $currency = Currency::factory()->create(['symbol' => '€', 'code' => 'EUR']);
@@ -124,7 +125,7 @@ class CurrencyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_currency()
     {
         $currency = Currency::factory()->create();
@@ -139,7 +140,7 @@ class CurrencyTest extends TestCase
         $this->assertDatabaseMissing('currencies', ['symbol' => 'Aggiornato da non-admin']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_currency()
     {
         $currency = Currency::factory()->create();
@@ -153,7 +154,7 @@ class CurrencyTest extends TestCase
         // oppure $this->assertDatabaseEURissing('currencies', ['id' => $currency->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_currency()
     {
         $currency = Currency::factory()->create();
@@ -166,7 +167,7 @@ class CurrencyTest extends TestCase
         $this->assertDatabaseHas('currencies', ['id' => $currency->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_currency()
     {
         $currency = Currency::factory()->create();
@@ -184,7 +185,7 @@ class CurrencyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Currency::factory()->count(2)->create();
@@ -202,7 +203,7 @@ class CurrencyTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_currency()
     {
         $response = $this->postJson('/api/currencies', [

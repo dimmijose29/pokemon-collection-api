@@ -114,4 +114,10 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    | Default di Laravel 13: la cache non deserializza oggetti PHP arbitrari.
+    | Se in futuro si salvano oggetti in cache, elencarne qui le classi.
+    */
+    'serializable_classes' => false,
+
 ];

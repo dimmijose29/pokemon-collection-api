@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class HealthTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function health_endpoint_responds()
     {
         $this->get('/up')->assertStatus(200);

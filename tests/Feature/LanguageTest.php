@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Language;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class LanguageTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_languages_list()
     {
         Language::factory()->count(5)->create();
@@ -34,7 +35,7 @@ class LanguageTest extends TestCase
                  ->assertJsonCount(5);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_language()
     {
         $language = Language::factory()->create([
@@ -54,7 +55,7 @@ class LanguageTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_language()
     {
         $payload = [
@@ -78,7 +79,7 @@ class LanguageTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_language()
     {
         $payload = [
@@ -94,7 +95,7 @@ class LanguageTest extends TestCase
         $this->assertDatabaseMissing('languages', ['code' => 'YY']);
     }
 
-    /** @test */
+    #[Test]
     public function code_must_be_unique_on_create()
     {
         Language::factory()->create(['code' => 'EN', 'name' => 'English']);
@@ -109,7 +110,7 @@ class LanguageTest extends TestCase
                  ->assertJsonValidationErrors('code');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_language()
     {
         $language = Language::factory()->create([
@@ -136,7 +137,7 @@ class LanguageTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_language()
     {
         $language = Language::factory()->create();
@@ -151,7 +152,7 @@ class LanguageTest extends TestCase
         $this->assertDatabaseMissing('languages', ['name' => 'Aggiornato da non-admin']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_language()
     {
         $language = Language::factory()->create();
@@ -165,7 +166,7 @@ class LanguageTest extends TestCase
         // oppure $this->assertDatabaseMissing('languages', ['id' => $language->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_language()
     {
         $language = Language::factory()->create();
@@ -178,7 +179,7 @@ class LanguageTest extends TestCase
         $this->assertDatabaseHas('languages', ['id' => $language->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_language()
     {
         $language = Language::factory()->create();
@@ -196,7 +197,7 @@ class LanguageTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Language::factory()->count(2)->create();
@@ -214,7 +215,7 @@ class LanguageTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_language()
     {
         $response = $this->postJson('/api/languages', [

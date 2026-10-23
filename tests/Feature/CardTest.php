@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Card;
 use App\Models\Set;
 use App\Models\User;
@@ -25,7 +26,7 @@ class CardTest extends TestCase
         $this->set   = Set::factory()->create();
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_cards_list()
     {
         Card::factory()->count(3)->create(['set_id' => $this->set->id]);
@@ -35,7 +36,7 @@ class CardTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function index_supports_set_id_filter()
     {
         $otherSet = Set::factory()->create();
@@ -47,7 +48,7 @@ class CardTest extends TestCase
              ->assertJsonCount(2);
     }
 
-    /** @test */
+    #[Test]
     public function paginated_index_caps_per_page()
     {
         Card::factory()->count(3)->create(['set_id' => $this->set->id]);
@@ -57,7 +58,7 @@ class CardTest extends TestCase
              ->assertJsonPath('meta.per_page', 100);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_card()
     {
         $card = Card::factory()->create([
@@ -70,7 +71,7 @@ class CardTest extends TestCase
              ->assertJsonPath('local_id', '001');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_card()
     {
         $payload = [
@@ -87,7 +88,7 @@ class CardTest extends TestCase
         $this->assertDatabaseHas('cards', ['tcgdex_id' => 'swsh1-001']);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_card()
     {
         $this->actingAs($this->user)
@@ -99,7 +100,7 @@ class CardTest extends TestCase
              ->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_card()
     {
         $this->postJson('/api/cards', [
@@ -109,7 +110,7 @@ class CardTest extends TestCase
         ])->assertStatus(401);
     }
 
-    /** @test */
+    #[Test]
     public function set_id_is_required_on_create()
     {
         $this->actingAs($this->admin)
@@ -118,7 +119,7 @@ class CardTest extends TestCase
              ->assertJsonValidationErrors('set_id');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_card()
     {
         $card = Card::factory()->create(['set_id' => $this->set->id]);
@@ -132,7 +133,7 @@ class CardTest extends TestCase
              ->assertJsonPath('local_id', '999');
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_card()
     {
         $card = Card::factory()->create(['set_id' => $this->set->id]);
@@ -142,7 +143,7 @@ class CardTest extends TestCase
              ->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_card()
     {
         $card = Card::factory()->create(['set_id' => $this->set->id]);
@@ -154,7 +155,7 @@ class CardTest extends TestCase
         $this->assertSoftDeleted('cards', ['id' => $card->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_card()
     {
         $card = Card::factory()->create(['set_id' => $this->set->id]);
@@ -164,7 +165,7 @@ class CardTest extends TestCase
              ->assertStatus(403);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_card()
     {
         $card = Card::factory()->create(['set_id' => $this->set->id]);
@@ -178,7 +179,7 @@ class CardTest extends TestCase
         $this->assertDatabaseHas('cards', ['id' => $card->id, 'deleted_at' => null]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Card::factory()->count(2)->create(['set_id' => $this->set->id]);
@@ -188,7 +189,7 @@ class CardTest extends TestCase
         $this->getJson('/api/cards?withTrashed=true')->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function image_url_has_quality_suffix_appended()
     {
         $card = Card::factory()->create([

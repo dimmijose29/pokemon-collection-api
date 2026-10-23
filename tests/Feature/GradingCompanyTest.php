@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\GradingCompany;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class GradingCompanyTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_grading_companies_list()
     {
         GradingCompany::factory()->count(2)->create();
@@ -34,7 +35,7 @@ class GradingCompanyTest extends TestCase
                  ->assertJsonCount(2);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create([
@@ -50,7 +51,7 @@ class GradingCompanyTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_grading_company()
     {
         $payload = [
@@ -68,7 +69,7 @@ class GradingCompanyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_grading_company()
     {
         $payload = [
@@ -83,7 +84,7 @@ class GradingCompanyTest extends TestCase
         $this->assertDatabaseMissing('grading_companies', ['name' => 'TAG']);
     }
 
-    /** @test */
+    #[Test]
     public function code_must_be_unique_on_create()
     {
         GradingCompany::factory()->create(['name' => 'TAG']);
@@ -97,7 +98,7 @@ class GradingCompanyTest extends TestCase
                  ->assertJsonValidationErrors('name');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create(['name' => 'PSA']);
@@ -118,7 +119,7 @@ class GradingCompanyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
@@ -133,7 +134,7 @@ class GradingCompanyTest extends TestCase
         $this->assertDatabaseMissing('grading_companies', ['name' => 'Aggiornato da non-admin']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
@@ -147,7 +148,7 @@ class GradingCompanyTest extends TestCase
         // oppure $this->assertDatabaseMissing('grading_companies', ['id' => $gradingCompany->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
@@ -160,7 +161,7 @@ class GradingCompanyTest extends TestCase
         $this->assertDatabaseHas('grading_companies', ['id' => $gradingCompany->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_grading_company()
     {
         $gradingCompany = GradingCompany::factory()->create();
@@ -178,7 +179,7 @@ class GradingCompanyTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         GradingCompany::factory()->count(2)->create();
@@ -196,7 +197,7 @@ class GradingCompanyTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_grading_company()
     {
         $response = $this->postJson('/api/grading-companies', ['name' => 'GradingCompany Non Autenticata']);

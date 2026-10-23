@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Rarity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class RarityTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_rarities_list()
     {
         Rarity::factory()->count(5)->create();
@@ -34,7 +35,7 @@ class RarityTest extends TestCase
                  ->assertJsonCount(5);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_rarity()
     {
         $rarity = Rarity::factory()->create([
@@ -50,7 +51,7 @@ class RarityTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_rarity()
     {
         $payload = [
@@ -68,7 +69,7 @@ class RarityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_rarity()
     {
         $payload = [
@@ -80,10 +81,10 @@ class RarityTest extends TestCase
 
         $response->assertStatus(403);
 
-        $this->assertDatabaseMissing('rarities', ['code' => 'YY']);
+        $this->assertDatabaseMissing('rarities', ['name' => 'EX']);
     }
 
-    /** @test */
+    #[Test]
     public function code_must_be_unique_on_create()
     {
         Rarity::factory()->create(['name' => 'VMAX']);
@@ -97,7 +98,7 @@ class RarityTest extends TestCase
                  ->assertJsonValidationErrors('name');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_rarity()
     {
         $rarity = Rarity::factory()->create(['name' => 'VSTAR']);
@@ -118,7 +119,7 @@ class RarityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_rarity()
     {
         $rarity = Rarity::factory()->create();
@@ -133,7 +134,7 @@ class RarityTest extends TestCase
         $this->assertDatabaseMissing('rarities', ['name' => 'Aggiornato da non-admin']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_rarity()
     {
         $rarity = Rarity::factory()->create();
@@ -147,7 +148,7 @@ class RarityTest extends TestCase
         // oppure $this->assertDatabaseMissing('rarities', ['id' => $rarity->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_rarity()
     {
         $rarity = Rarity::factory()->create();
@@ -160,7 +161,7 @@ class RarityTest extends TestCase
         $this->assertDatabaseHas('rarities', ['id' => $rarity->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_rarity()
     {
         $rarity = Rarity::factory()->create();
@@ -178,7 +179,7 @@ class RarityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Rarity::factory()->count(2)->create();
@@ -196,7 +197,7 @@ class RarityTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_rarity()
     {
         $response = $this->postJson('/api/rarities', ['name' => 'Rarity Non Autenticata']);

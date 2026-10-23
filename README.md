@@ -8,18 +8,18 @@ API REST per l'applicazione Pokémon Collection, costruita con **Laravel** e **M
 
 | Tecnologia | Versione | Utilizzo |
 |---|---|---|
-| PHP | 8.2+ | Linguaggio |
-| Laravel | 12.x | Framework |
+| PHP | 8.3+ | Linguaggio |
+| Laravel | 13.x | Framework |
 | MySQL | 8.0+ | Database (obbligatorio: alcune query usano funzioni MySQL) |
 | Laravel Sanctum | 4.x | Autenticazione API con token Bearer |
-| PragmaRX Google2FA | 2.x | Autenticazione a due fattori (TOTP) |
+| PragmaRX Google2FA | 9.x | Autenticazione a due fattori (TOTP) |
 | TCGdex | — | Sorgente esterna del catalogo (set, carte, prezzi) |
 
 ---
 
 ## Requisiti
 
-- PHP >= 8.2 con estensioni: `pdo_mysql`, `mbstring`, `openssl`, `pcntl` (timeout dei job), `gd` (test)
+- PHP >= 8.3 con estensioni: `pdo_mysql`, `mbstring`, `openssl`, `pcntl` (timeout dei job), `gd` (test)
 - Composer
 - MySQL 8.0+
 - Accesso a internet verso `api.tcgdex.net` (seed e sincronizzazione)
@@ -68,9 +68,15 @@ php artisan sync:cards --queue  # in coda
 php artisan test
 ```
 
-I test usano SQLite in memoria (`phpunit.xml`). Se le variabili `DB_*` sono già impostate nell'ambiente
-(ad esempio dentro un container), sovrascrivono `phpunit.xml`: in quel caso lanciare
-`DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test`, altrimenti `RefreshDatabase` svuota il database configurato.
+I test usano un database MySQL separato chiamato `testing` (stesso host e utente di `.env`), da creare una volta:
+
+```sql
+CREATE DATABASE testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON testing.* TO '<utente>'@'%';
+```
+
+`phpunit.xml` forza `DB_DATABASE=testing` anche sopra le variabili d'ambiente, e `tests/TestCase.php`
+blocca l'avvio se il database configurato non è `testing`: `RefreshDatabase` non può svuotare quello di sviluppo.
 
 ---
 

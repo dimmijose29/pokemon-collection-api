@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use App\Models\Artist;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class ArtistTest extends TestCase
         $this->user  = User::factory()->create(['is_admin' => false]);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_artists_list()
     {
         Artist::factory()->count(2)->create();
@@ -34,7 +35,7 @@ class ArtistTest extends TestCase
                  ->assertJsonCount(2);
     }
 
-    /** @test */
+    #[Test]
     public function anyone_can_view_single_artist()
     {
         $artist = Artist::factory()->create([
@@ -50,7 +51,7 @@ class ArtistTest extends TestCase
                  ]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_create_artist()
     {
         $payload = [
@@ -68,7 +69,7 @@ class ArtistTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_create_artist()
     {
         $payload = [
@@ -83,7 +84,7 @@ class ArtistTest extends TestCase
         $this->assertDatabaseMissing('artists', ['name' => 'Tika Matsuno']);
     }
 
-    /** @test */
+    #[Test]
     public function code_must_be_unique_on_create()
     {
         Artist::factory()->create(['name' => 'Tika Matsuno']);
@@ -97,7 +98,7 @@ class ArtistTest extends TestCase
                  ->assertJsonValidationErrors('name');
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_update_artist()
     {
         $artist = Artist::factory()->create(['name' => 'Shinji Kanda']);
@@ -118,7 +119,7 @@ class ArtistTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_update_artist()
     {
         $artist = Artist::factory()->create();
@@ -133,7 +134,7 @@ class ArtistTest extends TestCase
         $this->assertDatabaseMissing('artists', ['name' => 'Aggiornato da non-admin']);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_delete_artist()
     {
         $artist = Artist::factory()->create();
@@ -147,7 +148,7 @@ class ArtistTest extends TestCase
         // oppure $this->assertDatabaseMissing('artists', ['id' => $artist->id]);
     }
 
-    /** @test */
+    #[Test]
     public function non_admin_cannot_delete_artist()
     {
         $artist = Artist::factory()->create();
@@ -160,7 +161,7 @@ class ArtistTest extends TestCase
         $this->assertDatabaseHas('artists', ['id' => $artist->id]);
     }
 
-    /** @test */
+    #[Test]
     public function admin_can_restore_artist()
     {
         $artist = Artist::factory()->create();
@@ -178,7 +179,7 @@ class ArtistTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function index_returns_soft_deleted_with_trashed_param()
     {
         Artist::factory()->count(2)->create();
@@ -196,7 +197,7 @@ class ArtistTest extends TestCase
              ->assertJsonCount(3);
     }
 
-    /** @test */
+    #[Test]
     public function unauthenticated_cannot_create_artist()
     {
         $response = $this->postJson('/api/artists', ['name' => 'Artista Non Autenticato']);
