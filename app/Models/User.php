@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -18,6 +17,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'totp_secret',
+        'totp_last_used_timestamp',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
     ];
@@ -26,6 +26,8 @@ class User extends Authenticatable
         'is_admin' => 'boolean',
         'is_active'                 => 'boolean',
         'is_2fa_enabled'            => 'boolean',
+        'totp_secret'               => 'encrypted',
+        'totp_last_used_timestamp'  => 'integer',
         'email_verified_at'         => 'datetime',
         'last_login_at'             => 'datetime',
         'two_factor_recovery_codes' => 'array',
@@ -33,14 +35,6 @@ class User extends Authenticatable
         'birth_year'                => 'integer',
         'password' => 'hashed',
     ];
-
-    // Mutatore per hashed_password (usa bcrypt automaticamente)
-    protected function hashedPassword(): Attribute
-    {
-        return Attribute::make(
-            set: fn($value) => bcrypt($value),
-        );
-    }
 
     // Metodo helper per verificare 2FA
     public function hasEnabledTwoFactor(): bool
