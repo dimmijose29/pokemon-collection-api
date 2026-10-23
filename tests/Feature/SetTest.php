@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Set;
 
+use App\Models\Series;
 use App\Models\Set;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,10 +46,12 @@ class SetTest extends TestCase
     /** @test */
     public function index_supports_series_filter()
     {
-        Set::factory()->count(2)->create(['series' => 'Sword & Shield']);
-        Set::factory()->create(['series' => 'Scarlet & Violet']);
+        $swordShield = Series::factory()->create(['name' => 'Sword & Shield']);
+        $scarletViolet = Series::factory()->create(['name' => 'Scarlet & Violet']);
+        Set::factory()->count(2)->create(['series_id' => $swordShield->id]);
+        Set::factory()->create(['series_id' => $scarletViolet->id]);
 
-        $this->getJson('/api/sets?series=Sword+%26+Shield')
+        $this->getJson("/api/sets?series_id={$swordShield->id}")
              ->assertStatus(200)
              ->assertJsonCount(2);
     }
@@ -59,7 +62,7 @@ class SetTest extends TestCase
         $payload = [
             'tcgdex_id'           => 'test1',
             'name'                => 'Test Set',
-            'series'              => 'Test Series',
+            'series_id'           => Series::factory()->create()->id,
             'card_count_official' => 100,
             'card_count_total'    => 110,
             'release_date'        => '2024-01-01',
@@ -71,6 +74,15 @@ class SetTest extends TestCase
              ->assertJsonPath('name', 'Test Set');
 
         $this->assertDatabaseHas('sets', ['tcgdex_id' => 'test1']);
+    }
+
+    /** @test */
+    public function creating_set_requires_tcgdex_id()
+    {
+        $this->actingAs($this->admin)
+             ->postJson('/api/sets', ['name' => 'Senza id'])
+             ->assertStatus(422)
+             ->assertJsonValidationErrors('tcgdex_id');
     }
 
     /** @test */

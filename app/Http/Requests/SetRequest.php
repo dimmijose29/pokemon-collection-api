@@ -39,8 +39,9 @@ class SetRequest extends FormRequest
         $setId = $this->route('set')?->id;
 
         return [
+            // Obbligatorio in creazione: la colonna è NOT NULL e identifica il record per la sync
             'tcgdex_id'           => [
-                'sometimes',
+                $this->isMethod('POST') ? 'required' : 'sometimes',
                 'string',
                 'max:50',
                 Rule::unique('sets', 'tcgdex_id')->ignore($setId),
@@ -60,6 +61,7 @@ class SetRequest extends FormRequest
         return [
             'name.required'   => 'Il nome del set è obbligatorio',
             'name.max'        => 'Il nome non può superare i 100 caratteri',
+            'tcgdex_id.required' => "L'ID TCGdex è obbligatorio",
             'tcgdex_id.unique' => 'Questo ID TCGdex è già in uso',
             'release_date.date' => 'La data di uscita non è valida',
         ];

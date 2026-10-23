@@ -10,7 +10,7 @@ class SeriesRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if (\!$user) return false;
+        if (!$user) return false;
         if ($this->method() === 'GET') return true;
         return $user->is_admin;
     }

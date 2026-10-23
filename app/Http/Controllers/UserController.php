@@ -46,7 +46,8 @@ class UserController extends Controller
 
         $validated['password'] = bcrypt($validated['password']);
 
-        $user = User::create($validated);
+        // refresh(): senza, i campi con default del DB (is_admin, is_active) risultano null
+        $user = User::create($validated)->refresh();
 
         return response()->json(new UserResource($user), 201);
     }

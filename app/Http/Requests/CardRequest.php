@@ -39,8 +39,9 @@ class CardRequest extends FormRequest
         $cardId = $this->route('card')?->id;
 
         return [
+            // Obbligatorio in creazione: la colonna è NOT NULL e identifica il record per la sync
             'tcgdex_id'    => [
-                'sometimes',
+                $this->isMethod('POST') ? 'required' : 'sometimes',
                 'string',
                 'max:100',
                 Rule::unique('cards', 'tcgdex_id')->ignore($cardId),
@@ -63,6 +64,7 @@ class CardRequest extends FormRequest
             'set_id.required'  => 'Il set è obbligatorio',
             'set_id.exists'    => 'Il set selezionato non esiste',
             'local_id.required' => 'Il numero carta è obbligatorio',
+            'tcgdex_id.required' => "L'ID TCGdex è obbligatorio",
             'tcgdex_id.unique' => 'Questo ID TCGdex è già in uso',
         ];
     }

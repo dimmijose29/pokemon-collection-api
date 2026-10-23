@@ -11,7 +11,7 @@ class SetFactory extends Factory
         return [
             'tcgdex_id'           => $this->faker->unique()->bothify('??##'),
             'name'                => $this->faker->unique()->words(3, true),
-            'series'              => $this->faker->randomElement(['Sword & Shield', 'Scarlet & Violet', 'Sun & Moon']),
+            'series_id'           => null,
             'card_count_official' => $this->faker->numberBetween(100, 200),
             'card_count_total'    => $this->faker->numberBetween(200, 250),
             'release_date'        => $this->faker->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),

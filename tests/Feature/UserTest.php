@@ -136,7 +136,7 @@ class UserTest extends TestCase
     /** @test */
     public function admin_can_upload_avatar()
     {
-        Storage::fake('public');
+        Storage::fake('avatars');
 
         $file = UploadedFile::fake()->image('avatar.jpg', 200, 200);
 
@@ -147,7 +147,7 @@ class UserTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertNotNull($response->json('avatar_url'));
-        Storage::disk('public')->assertExists('avatars/' . $file->hashName());
+        Storage::disk('avatars')->assertExists($file->hashName());
     }
 
     /** @test */
